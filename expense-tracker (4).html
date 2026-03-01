@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>כסף חכם</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --border: #2a2a3a;
+    --accent: #6c63ff;
+    --accent2: #ff6584;
+    --accent3: #43d9a0;
+    --warn: #ffa94d;
+    --text: #e8e8f0;
+    --text-dim: #7a7a9a;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Heebo',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 16px; position:sticky; top:0; z-index:100; display:flex; align-items:center; justify-content:space-between; }
+  .logo { font-size:19px; font-weight:900; letter-spacing:-0.5px; }
+  .logo span { color:var(--accent); }
+  .month-nav { display:flex; align-items:center; gap:10px; }
+  .month-nav button { background:var(--surface2); border:1px solid var(--border); color:var(--text); width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; }
+  .month-label { font-size:14px; font-weight:700; min-width:95px; text-align:center; }
+
+  .main { padding:14px; max-width:600px; margin:0 auto; padding-bottom:90px; }
+  .page { display:none; }
+  .page.active { display:block; }
+
+  /* BUDGET */
+  .budget-card { background:linear-gradient(135deg,#1a1a2e,#16213e); border:1px solid var(--accent); border-radius:16px; padding:18px; margin-bottom:16px; }
+  .budget-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .budget-title { font-size:11px; color:var(--accent); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+  .budget-edit-btn { background:none; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:11px; padding:3px 8px; cursor:pointer; font-family:'Heebo',sans-serif; }
+  .budget-amounts { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  .budget-spent { font-size:30px; font-weight:900; letter-spacing:-1px; }
+  .budget-spent .cur { font-size:16px; color:var(--text-dim); }
+  .budget-remaining .rem-label { font-size:11px; color:var(--text-dim); text-align:left; }
+  .budget-remaining .rem-amount { font-size:18px; font-weight:700; text-align:left; }
+  .budget-bar-bg { height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; margin-bottom:6px; }
+  .budget-bar-fill { height:100%; border-radius:4px; transition:width 0.6s ease; }
+  .budget-meta { display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); }
+
+  .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .summary-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; position:relative; overflow:hidden; }
+  .summary-card::before { content:''; position:absolute; top:0; right:0; width:50px; height:50px; border-radius:50%; opacity:0.1; transform:translate(15px,-15px); }
+  .summary-card.isracard::before { background:#0066cc; }
+  .summary-card.cal::before { background:#cc3300; }
+  .summary-card.foreign::before { background:var(--accent3); }
+  .summary-card.rec::before { background:var(--warn); }
+  .card-label { font-size:10px; color:var(--text-dim); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; }
+  .card-amount { font-size:20px; font-weight:900; letter-spacing:-0.5px; }
+  .card-amount .cur { font-size:12px; font-weight:400; color:var(--text-dim); }
+  .card-sub { font-size:10px; color:var(--text-dim); margin-top:3px; }
+
+  .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:16px; }
+  .chart-title { font-size:11px; color:var(--text-dim); margin-bottom:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+  .bar-chart { display:flex; align-items:flex-end; gap:5px; height:70px; }
+  .bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; height:100%; justify-content:flex-end; }
+  .bar { width:100%; border-radius:3px 3px 0 0; min-height:3px; }
+  .bar-label { font-size:9px; color:var(--text-dim); }
+
+  .section-title { font-size:11px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; margin-top:18px; }
+
+  /* EXPANDABLE CATEGORIES */
+  .category-item { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:8px; transition:border-color 0.2s; }
+  .category-item.open { border-color:var(--accent); }
+  .cat-header { padding:12px 14px; cursor:pointer; user-select:none; }
+  .cat-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .cat-name { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; }
+  .cat-emoji { font-size:17px; }
+  .cat-right { display:flex; align-items:center; gap:10px; }
+  .cat-amount { font-size:15px; font-weight:700; }
+  .cat-chevron { font-size:11px; color:var(--text-dim); transition:transform 0.25s; display:inline-block; }
+  .category-item.open .cat-chevron { transform:rotate(180deg); }
+  .cat-bar-bg { height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .cat-bar { height:100%; border-radius:2px; transition:width 0.5s ease; }
+  .cat-count { font-size:11px; color:var(--text-dim); }
+
+  .cat-detail { display:none; border-top:1px solid var(--border); background:var(--surface2); }
+  .category-item.open .cat-detail { display:block; }
+  .cat-tx-item { padding:11px 14px; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--border); }
+  .cat-tx-item:last-child { border-bottom:none; }
+  .rec-btn { font-size:15px; cursor:pointer; flex-shrink:0; opacity:0.4; transition:opacity 0.15s; }
+  .rec-btn.on { opacity:1; }
+  .cat-tx-name { flex:1; font-size:13px; font-weight:500; }
+  .cat-tx-date { font-size:11px; color:var(--text-dim); flex-shrink:0; }
+  .cat-tx-amount { font-size:13px; font-weight:700; flex-shrink:0; margin-right:6px; }
+  .rec-badge { background:rgba(255,169,77,0.15); color:var(--warn); font-size:9px; padding:1px 5px; border-radius:3px; font-weight:700; flex-shrink:0; }
+
+  /* TRANSACTIONS */
+  .search-box { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .search-box input { flex:1; background:none; border:none; outline:none; color:var(--text); font-family:'Heebo',sans-serif; font-size:14px; }
+  .search-box input::placeholder { color:var(--text-dim); }
+  .filters { display:flex; gap:7px; overflow-x:auto; scrollbar-width:none; margin-bottom:14px; }
+  .filters::-webkit-scrollbar { display:none; }
+  .filter-chip { padding:6px 13px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); font-size:12px; cursor:pointer; white-space:nowrap; font-family:'Heebo',sans-serif; transition:all 0.15s; }
+  .filter-chip.active { background:var(--accent); border-color:var(--accent); color:white; }
+
+  .tx-list { display:flex; flex-direction:column; gap:7px; }
+  .tx-item { background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:12px 14px; display:flex; align-items:center; gap:10px; }
+  .tx-icon { width:38px; height:38px; border-radius:9px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+  .tx-info { flex:1; min-width:0; }
+  .tx-name { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tx-meta { font-size:10px; color:var(--text-dim); margin-top:2px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .tx-card-badge { font-size:9px; padding:1px 5px; border-radius:3px; font-weight:700; }
+  .badge-isracard { background:rgba(0,102,204,0.2); color:#4d9fff; }
+  .badge-cal { background:rgba(204,51,0,0.2); color:#ff7755; }
+  .tx-right { flex-shrink:0; text-align:left; }
+  .tx-amount { font-size:14px; font-weight:700; }
+  .tx-amount.foreign { color:var(--accent3); }
+  .tx-date { font-size:10px; color:var(--text-dim); margin-top:2px; }
+  .tx-rec-btn { font-size:16px; cursor:pointer; opacity:0.35; transition:opacity 0.15s; flex-shrink:0; }
+  .tx-rec-btn.on { opacity:1; }
+
+  /* MERCHANTS */
+  .merchant-wrap { margin-bottom:8px; }
+  .merchant-item { background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:13px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:border-color 0.15s; }
+  .merchant-wrap.open .merchant-item { border-radius:11px 11px 0 0; border-color:var(--accent); border-bottom-color:transparent; }
+  .merchant-rank { font-size:12px; color:var(--text-dim); width:22px; flex-shrink:0; }
+  .merchant-name { flex:1; font-size:14px; font-weight:600; }
+  .merchant-count { font-size:11px; color:var(--text-dim); }
+  .merchant-amount { font-size:14px; font-weight:700; }
+  .merchant-chevron { font-size:10px; color:var(--text-dim); transition:transform 0.2s; }
+  .merchant-wrap.open .merchant-chevron { transform:rotate(180deg); }
+  .merchant-detail { display:none; background:var(--surface2); border:1px solid var(--accent); border-top:none; border-radius:0 0 11px 11px; overflow:hidden; }
+  .merchant-wrap.open .merchant-detail { display:block; }
+  .merchant-tx { padding:10px 14px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); }
+  .merchant-tx:last-child { border-bottom:none; }
+  .merchant-tx-date { font-size:11px; color:var(--text-dim); }
+  .merchant-tx-amount { font-size:13px; font-weight:700; }
+
+  /* ADD/SETTINGS */
+  .inp { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text); font-family:'Heebo',sans-serif; font-size:14px; outline:none; }
+  .inp:focus { border-color:var(--accent); }
+  .lbl { font-size:11px; color:var(--text-dim); display:block; margin-bottom:5px; }
+  .field { margin-bottom:12px; }
+  .card-form { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .btn-primary { width:100%; background:var(--accent); border:none; border-radius:10px; padding:13px; color:white; font-family:'Heebo',sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
+  .btn-secondary { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px; color:var(--text-dim); font-family:'Heebo',sans-serif; font-size:13px; cursor:pointer; margin-top:8px; }
+  .toggle { width:42px; height:22px; background:var(--border); border-radius:11px; position:relative; cursor:pointer; transition:background 0.2s; flex-shrink:0; display:inline-block; }
+  .toggle.on { background:var(--accent); }
+  .toggle::after { content:''; position:absolute; width:16px; height:16px; background:white; border-radius:50%; top:3px; right:3px; transition:transform 0.2s; }
+  .toggle.on::after { transform:translateX(-20px); }
+
+  .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); display:flex; padding:6px 0 18px; z-index:100; }
+  .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px; cursor:pointer; color:var(--text-dim); font-size:9px; transition:color 0.15s; }
+  .nav-item.active { color:var(--accent); }
+  .nav-item .icon { font-size:20px; }
+
+  .toast { position:fixed; bottom:85px; left:50%; transform:translateX(-50%) translateY(10px); background:var(--accent); color:white; padding:9px 18px; border-radius:18px; font-size:12px; font-weight:600; opacity:0; transition:all 0.25s; z-index:200; white-space:nowrap; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:300; display:none; align-items:flex-end; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--surface); border-radius:20px 20px 0 0; padding:24px; width:100%; max-width:600px; }
+  .modal-title { font-size:16px; font-weight:700; margin-bottom:16px; }
+
+  .empty-state { text-align:center; padding:36px 20px; color:var(--text-dim); }
+  .empty-state .icon { font-size:44px; margin-bottom:10px; }
+  .empty-state p { font-size:13px; }
+
+  /* COMPARISON PAGE */
+  .compare-controls { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:14px; }
+  .compare-range-row { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+  .range-btn { padding:6px 13px; border-radius:18px; border:1px solid var(--border); background:var(--surface2); color:var(--text-dim); font-size:12px; cursor:pointer; font-family:'Heebo',sans-serif; white-space:nowrap; transition:all 0.15s; }
+  .range-btn.active { background:var(--accent); border-color:var(--accent); color:white; }
+  .compare-view-row { display:flex; gap:6px; }
+  .view-btn { flex:1; padding:7px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text-dim); font-size:12px; cursor:pointer; font-family:'Heebo',sans-serif; text-align:center; transition:all 0.15s; }
+  .view-btn.active { background:var(--surface); border-color:var(--accent); color:var(--accent); font-weight:700; }
+
+  /* MONTH HEADERS */
+  .compare-table { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+  .compare-thead { display:grid; border-bottom:1px solid var(--border); background:var(--surface2); padding:10px 14px; }
+  .compare-thead .th { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; font-weight:700; text-align:center; }
+  .compare-thead .th:first-child { text-align:right; }
+
+  /* CATEGORY ROWS */
+  .cmp-cat-wrap { border-bottom:1px solid var(--border); }
+  .cmp-cat-wrap:last-child { border-bottom:none; }
+  .cmp-cat-row { display:grid; padding:11px 14px; cursor:pointer; align-items:center; transition:background 0.15s; }
+  .cmp-cat-row:hover { background:var(--surface2); }
+  .cmp-cat-row.has-drill { }
+  .cmp-cat-name { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:600; }
+  .cmp-cat-emoji { font-size:15px; }
+  .cmp-cell { text-align:center; font-size:13px; font-weight:600; }
+  .cmp-cell.zero { color:var(--text-dim); font-weight:400; }
+  .cmp-cell.up { color:var(--accent2); }
+  .cmp-cell.down { color:var(--accent3); }
+  .cmp-chevron { font-size:10px; color:var(--text-dim); transition:transform 0.2s; display:inline-block; margin-right:4px; }
+  .cmp-cat-wrap.open .cmp-chevron { transform:rotate(180deg); }
+
+  /* DRILL-DOWN MERCHANT ROWS */
+  .cmp-drill { display:none; background:var(--surface2); border-top:1px solid var(--border); }
+  .cmp-cat-wrap.open .cmp-drill { display:block; }
+  .cmp-merch-row { display:grid; padding:9px 14px 9px 28px; border-bottom:1px solid var(--border); align-items:center; }
+  .cmp-merch-row:last-child { border-bottom:none; }
+  .cmp-merch-name { font-size:12px; color:var(--text-dim); font-weight:500; }
+  .cmp-merch-cell { text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); }
+  .cmp-merch-cell.has-val { color:var(--text); }
+
+  /* TOTAL ROW */
+  .cmp-total-row { display:grid; padding:12px 14px; background:rgba(108,99,255,0.08); border-top:1px solid var(--accent); align-items:center; }
+  .cmp-total-label { font-size:12px; font-weight:700; color:var(--accent); }
+  .cmp-total-cell { text-align:center; font-size:13px; font-weight:900; }
+
+  /* TREND SPARKLINE */
+  .cmp-trend { display:flex; align-items:flex-end; gap:2px; height:20px; margin:0 auto; width:50px; }
+  .cmp-spark { flex:1; border-radius:2px 2px 0 0; min-height:2px; background:var(--accent); opacity:0.6; }
+
+  /* SUMMARY PILLS */
+  .cmp-summary { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; margin-bottom:14px; padding-bottom:2px; }
+  .cmp-summary::-webkit-scrollbar { display:none; }
+  .cmp-pill { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 14px; flex-shrink:0; min-width:100px; }
+  .cmp-pill-label { font-size:9px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; }
+  .cmp-pill-val { font-size:17px; font-weight:900; letter-spacing:-0.5px; }
+  .cmp-pill-sub { font-size:10px; color:var(--text-dim); margin-top:2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">כסף<span>חכם</span></div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button onclick="syncFromSheets()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="סנכרן מ-Google Sheets">🔄</button>
+    <button onclick="document.getElementById('csvInput').click()" style="background:var(--surface2);border:1px solid var(--border);color:var(--warn);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="ייבוא CSV מ-Sheets">📥</button>
+    <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="importCSV(this)">
+    <div class="month-nav">
+      <button onclick="changeMonth(-1)">›</button>
+      <div class="month-label" id="monthLabel"></div>
+      <button onclick="changeMonth(1)">‹</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="page-home" class="page active">
+  <div class="main">
+    <div class="budget-card">
+      <div class="budget-header">
+        <div class="budget-title">תקציב חודשי</div>
+        <button class="budget-edit-btn" onclick="openBudgetModal()">✏️ עריכה</button>
+      </div>
+      <div class="budget-amounts">
+        <div>
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:3px">הוצאתי</div>
+          <div class="budget-spent"><span class="cur">₪</span><span id="budgetSpent">0</span></div>
+        </div>
+        <div class="budget-remaining">
+          <div class="rem-label">נותר</div>
+          <div class="rem-amount" id="budgetRemaining">—</div>
+        </div>
+      </div>
+      <div class="budget-bar-bg"><div class="budget-bar-fill" id="budgetBarFill" style="width:0%;background:var(--accent3)"></div></div>
+      <div class="budget-meta"><span id="budgetPct">לא הוגדר תקציב</span><span id="budgetTotal"></span></div>
+    </div>
+
+    <div class="summary-grid">
+      <div style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div>
+          <div class="card-label">תקציב חודשי</div>
+          <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px"><span style="font-size:13px;font-weight:400;color:var(--text-dim)">₪</span><span id="summBudgetSpent">0</span></div>
+          <div style="font-size:14px;font-weight:700;color:#4da6ff;margin-top:3px" id="summBudgetLabel">לא הוגדר תקציב</div>
+        </div>
+        <div style="flex:1;max-width:160px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:5px">
+            <span id="summBudgetPct">0%</span>
+            <span id="summBudgetRemaining"></span>
+          </div>
+          <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div id="summBudgetBar" style="height:100%;width:0%;border-radius:3px;background:var(--accent3);transition:width 0.5s ease"></div>
+          </div>
+        </div>
+      </div>
+      <div class="summary-card isracard">
+        <div class="card-label">ישראכרט</div>
+        <div class="card-amount"><span class="cur">₪</span><span id="isracardTotal">0</span></div>
+        <div class="card-sub" id="isracardCount">0 עסקאות</div>
+      </div>
+      <div class="summary-card cal">
+        <div class="card-label">ויזה כאל</div>
+        <div class="card-amount"><span class="cur">₪</span><span id="calTotal">0</span></div>
+        <div class="card-sub" id="calCount">0 עסקאות</div>
+      </div>
+      <div class="summary-card foreign">
+        <div class="card-label">עסקאות חו"ל</div>
+        <div class="card-amount"><span class="cur">₪</span><span id="foreignTotal">0</span></div>
+        <div class="card-sub" id="foreignCount">0 עסקאות</div>
+      </div>
+      <div class="summary-card rec">
+        <div class="card-label">הוצאות קבועות</div>
+        <div class="card-amount"><span class="cur">₪</span><span id="recurringTotal">0</span></div>
+        <div class="card-sub" id="recurringCount">0 עסקאות</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">7 ימים אחרונים</div>
+      <div class="bar-chart" id="weekChart"></div>
+    </div>
+
+    <div class="section-title">קטגוריות — לחץ לפירוט</div>
+    <div id="categoryList"></div>
+  </div>
+</div>
+
+<!-- TRANSACTIONS -->
+<div id="page-transactions" class="page">
+  <div class="main">
+    <div class="search-box">
+      <span style="color:var(--text-dim)">🔍</span>
+      <input type="text" id="searchInput" placeholder="חיפוש בית עסק..." oninput="renderTransactions()">
+    </div>
+    <div class="filters">
+      <button class="filter-chip active" onclick="setFilter('all',this)">הכל</button>
+      <button class="filter-chip" onclick="setFilter('isracard',this)">ישראכרט</button>
+      <button class="filter-chip" onclick="setFilter('cal',this)">ויזה כאל</button>
+      <button class="filter-chip" onclick="setFilter('foreign',this)">חו"ל</button>
+      <button class="filter-chip" onclick="setFilter('recurring',this)">⭐ קבועות</button>
+    </div>
+    <div class="tx-list" id="txList"></div>
+  </div>
+</div>
+
+<!-- MERCHANTS -->
+<div id="page-merchants" class="page">
+  <div class="main">
+    <div class="section-title">בתי עסק — לפי סכום מצטבר ↓ לחץ לפירוט</div>
+    <div id="merchantList"></div>
+  </div>
+</div>
+
+<!-- ADD/SETTINGS -->
+<div id="page-import" class="page">
+  <div class="main">
+    <div class="section-title">הוספת עסקה</div>
+    <div class="card-form">
+      <div class="field"><label class="lbl">בית עסק</label><input id="manualName" type="text" placeholder="שם" class="inp"></div>
+      <div class="field"><label class="lbl">סכום (₪)</label><input id="manualAmount" type="number" placeholder="0.00" class="inp"></div>
+      <div class="field"><label class="lbl">תאריך</label><input id="manualDate" type="date" class="inp"></div>
+      <div class="field"><label class="lbl">כרטיס</label>
+        <select id="manualCard" class="inp">
+          <option value="isracard">ישראכרט (...7787)</option>
+          <option value="cal">ויזה כאל (...4145)</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div class="toggle" id="manualRecToggle" onclick="this.classList.toggle('on')"></div>
+        <span style="font-size:13px;color:var(--text-dim)">הוצאה קבועה ⭐</span>
+      </div>
+      <button class="btn-primary" onclick="addManual()">הוסף עסקה</button>
+    </div>
+
+    <div class="section-title">תקציב חודשי</div>
+    <div class="card-form">
+      <div class="field"><label class="lbl">סכום תקציב (₪)</label><input id="budgetInput" type="number" placeholder="למשל: 20000" class="inp"></div>
+      <button class="btn-primary" onclick="saveBudget()">שמור תקציב</button>
+    </div>
+
+    <div class="section-title">דמו</div>
+    <button class="btn-secondary" style="border-color:var(--accent);color:var(--accent)" onclick="loadDemo()">📊 טען נתוני דוגמה</button>
+    <button class="btn-secondary" onclick="clearAll()">🗑️ נקה את כל הנתונים</button>
+
+    <div style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent)">📱 Tasker — SMS אוטומטי</div>
+      <div style="font-size:11px;color:var(--text-dim);line-height:2">
+        1. הורידי <strong style="color:var(--text)">Tasker</strong> מ-Google Play (~₪15)<br>
+        2. Profile חדש → Event → Phone → Received Text<br>
+        3. Sender: <code style="color:var(--accent3)">isracardmsg</code> או <code style="color:var(--accent3)">CAL</code><br>
+        4. Action → JavaScript → <code style="color:var(--accent3)">parseSMS(%SMSRB)</code><br>
+        5. חזרי על כך בטלפון של בעלך עם אותו קובץ
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARISON PAGE -->
+<div id="page-compare" class="page">
+  <div class="main">
+    <div class="compare-controls">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">טווח השוואה</div>
+      <div class="compare-range-row">
+        <button class="range-btn active" onclick="setCmpRange(3,this)">3 חודשים</button>
+        <button class="range-btn" onclick="setCmpRange(6,this)">6 חודשים</button>
+        <button class="range-btn" onclick="setCmpRange(12,this)">שנה שלמה</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;margin-top:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">תצוגה</div>
+      <div class="compare-view-row">
+        <button class="view-btn active" onclick="setCmpView('category',this)">📂 קטגוריה</button>
+        <button class="view-btn" onclick="setCmpView('merchant',this)">🏪 בית עסק</button>
+        <button class="view-btn" onclick="setCmpView('card',this)">💳 כרטיס</button>
+      </div>
+    </div>
+    <div class="cmp-summary" id="cmpSummary"></div>
+    <div id="compareTable"></div>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <div class="nav-item active" onclick="showPage('home',this)"><div class="icon">📊</div><div>סיכום</div></div>
+  <div class="nav-item" onclick="showPage('transactions',this)"><div class="icon">📋</div><div>עסקאות</div></div>
+  <div class="nav-item" onclick="showPage('compare',this)"><div class="icon">📈</div><div>השוואה</div></div>
+  <div class="nav-item" onclick="showPage('merchants',this)"><div class="icon">🏪</div><div>בתי עסק</div></div>
+  <div class="nav-item" onclick="showPage('import',this)"><div class="icon">➕</div><div>הוספה</div></div>
+</div>
+
+<!-- BUDGET MODAL -->
+<div class="modal-overlay" id="budgetModal" onclick="if(event.target===this)closeBudgetModal()">
+  <div class="modal">
+    <div class="modal-title">הגדרת תקציב חודשי</div>
+    <div class="field"><label class="lbl">תקציב (₪)</label><input id="budgetModalInput" type="number" placeholder="למשל: 20000" class="inp"></div>
+    <button class="btn-primary" onclick="saveBudgetModal()">שמור</button>
+    <button class="btn-secondary" onclick="closeBudgetModal()">ביטול</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let transactions = [];
+let monthlyBudget = 0;
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let activeFilter = 'all';
+
+const MONTHS_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+const CATEGORIES = {
+  'מזון וסופר':    { emoji:'🛒', color:'#6c63ff', keywords:['שופרסל','רמי לוי','מגה','סופר','קופיקס','אושר עד','יינות','סיטי'] },
+  'מסעדות ואוכל': { emoji:'🍔', color:'#ff6584', keywords:['מקדונלד','בורגר','פיצה','שווארמה','סושי','קפה','cafe','coffee','food','מסעדה','שניצל','קינג'] },
+  'דלק ורכב':     { emoji:'⛽', color:'#ffa94d', keywords:['דלק','paz','sonol','delek','פז','סונול','ten','טן'] },
+  'בריאות':        { emoji:'💊', color:'#43d9a0', keywords:['מכבי','כללית','לאומית','בית מרקחת','pharma','סופר-פארם','superpharm'] },
+  'בידור ומנויים':{ emoji:'🎬', color:'#da77f2', keywords:['netflix','spotify','youtube','amazon prime','apple','disney','cinema','yes','hot','deezer'] },
+  'קניות':         { emoji:'🛍️', color:'#ff8787', keywords:['aliexpress','amazon','zara','h&m','castro','fox','renuar','next','golf','asos'] },
+  'תחבורה':        { emoji:'🚌', color:'#74c0fc', keywords:['רב-קו','gett','uber','taxi','bus','אגד','דן','rail','wolt','bolt'] },
+  'חשמל ובית':    { emoji:'🏠', color:'#ffd43b', keywords:['חשמל','מים','גז','ועד','ארנונה','internet','bezeq','hot','012','cellcom','partner'] },
+  'אחר':           { emoji:'📦', color:'#868e96', keywords:[] }
+};
+
+function getCategory(name) {
+  const n = (name||'').toLowerCase();
+  for (const [cat, d] of Object.entries(CATEGORIES)) {
+    if (cat==='אחר') continue;
+    if (d.keywords.some(k=>n.includes(k.toLowerCase()))) return cat;
+  }
+  return 'אחר';
+}
+
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwuBHfEq9OEYcckCrJ2ltHUH_AZ0kPiqQDkIz7U8v4DP6LRxOKq5MP3HM5ssogKnOr9/exec';
+
+function importCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { showToast('קובץ ריק'); return; }
+    // detect separator
+    const sep = lines[0].includes('\t') ? '\t' : ',';
+    const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g,''));
+    const existing = new Set(transactions.map(t => t.date+'|'+t.name+'|'+t.amount));
+    let added = 0;
+    lines.slice(1).forEach(line => {
+      const cols = line.split(sep).map(c => c.trim().replace(/"/g,''));
+      const row = {};
+      headers.forEach((h,i) => row[h] = cols[i] || '');
+      // try to find date, name, amount columns
+      const date = row['תאריך'] || row['date'] || row['Date'] || '';
+      const name = row['שם בית עסק'] || row['name'] || row['שם'] || row['בית עסק'] || '';
+      const amount = parseFloat((row['סכום'] || row['amount'] || row['Amount'] || '0').replace(/[,₪]/g,''));
+      const card = row['כרטיס'] || row['card'] || 'cal';
+      if (!date || !name || !amount) return;
+      const key = date+'|'+name+'|'+amount;
+      if (existing.has(key)) return;
+      existing.add(key);
+      transactions.push({
+        id: Date.now()+Math.random(),
+        date, name, amount,
+        card: card.toLowerCase(),
+        foreign: (row['חול']||'') === 'כן',
+        recurring: false,
+        category: row['קטגוריה'] || getCategory(name)
+      });
+      added++;
+    });
+    input.value = '';
+    if (added > 0) { saveAll(); render(); renderCompare(); showToast(`יובאו ${added} עסקאות ✓`); }
+    else showToast('אין עסקאות חדשות לייבוא');
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+async function syncFromSheets() {
+  try {
+    const res = await fetch(SHEETS_URL, {redirect: 'follow'});
+    const text = await res.text();
+    let rows;
+    try { rows = JSON.parse(text); } catch(e) { throw new Error('parse error'); }
+    if (!Array.isArray(rows) || rows.length===0) { showToast('הכל מעודכן ✓'); return; }
+    const existing = new Set(transactions.map(t=>t.date+'|'+t.name+'|'+t.amount));
+    let added = 0;
+    rows.forEach(r => {
+      const key = r['תאריך']+'|'+r['שם בית עסק']+'|'+r['סכום'];
+      if (!existing.has(key) && r['תאריך'] && r['שם בית עסק']) {
+        transactions.push({
+          id: Date.now()+Math.random(),
+          date: r['תאריך'],
+          name: r['שם בית עסק'],
+          amount: parseFloat(r['סכום'])||0,
+          card: r['כרטיס']||'isracard',
+          foreign: r['חול']==='כן',
+          recurring: false,
+          category: r['קטגוריה']||getCategory(r['שם בית עסק'])
+        });
+        added++;
+      }
+    });
+    if (added>0) { saveAll(); render(); renderCompare(); showToast(`סונכרנו ${added} עסקאות חדשות ✓`); }
+    else showToast('הכל מעודכן ✓');
+  } catch(e) { showToast('שגיאת סנכרון — בדקי חיבור'); }
+}
+
+async function pushToSheets(tx) {
+  try {
+    await fetch(SHEETS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        date: tx.date, name: tx.name, amount: tx.amount,
+        card: tx.card, foreign: tx.foreign, category: tx.category, source: 'app'
+      })
+    });
+  } catch(e) {}
+}
+
+async function saveAll() {
+  const p = JSON.stringify({transactions, budget:monthlyBudget});
+  try { await window.storage.set('ksf-data', p); } catch(e) { localStorage.setItem('ksf-data', p); }
+}
+async function loadAll() {
+  try {
+    let raw;
+    try { const r = await window.storage.get('ksf-data'); raw = r?.value; } catch(e) { raw = localStorage.getItem('ksf-data'); }
+    if (raw) { const d = JSON.parse(raw); transactions=d.transactions||[]; monthlyBudget=d.budget||0; }
+  } catch(e) {}
+}
+
+function fmt(n) { return Math.round(n).toLocaleString('he-IL'); }
+function getMonthTxs() {
+  return transactions.filter(t=>{ const d=new Date(t.date); return d.getMonth()===currentMonth && d.getFullYear()===currentYear; });
+}
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function render() {
+  document.getElementById('monthLabel').textContent = `${MONTHS_HE[currentMonth]} ${currentYear}`;
+  renderBudget(); renderSummary(); renderChart(); renderCategories(); renderTransactions(); renderMerchants();
+}
+
+function renderBudget() {
+  const txs = getMonthTxs();
+  const spent = txs.reduce((s,t)=>s+t.amount,0);
+  document.getElementById('budgetSpent').textContent = fmt(spent);
+  if (monthlyBudget>0) {
+    const rem = monthlyBudget-spent;
+    const pct = Math.min((spent/monthlyBudget)*100,100);
+    const remEl = document.getElementById('budgetRemaining');
+    remEl.textContent = (rem<0?'-':'')+'₪'+fmt(Math.abs(rem));
+    remEl.style.color = rem<0?'var(--accent2)':'var(--accent3)';
+    const bar = document.getElementById('budgetBarFill');
+    bar.style.width = pct+'%';
+    bar.style.background = pct>90?'var(--accent2)':pct>70?'var(--warn)':'var(--accent3)';
+    document.getElementById('budgetPct').textContent = pct.toFixed(0)+'% מהתקציב נוצל';
+    document.getElementById('budgetTotal').textContent = 'מתוך ₪'+fmt(monthlyBudget);
+  } else {
+    document.getElementById('budgetRemaining').textContent='—';
+    document.getElementById('budgetPct').textContent='לחץ על עריכה להגדרת תקציב';
+    document.getElementById('budgetTotal').textContent='';
+    document.getElementById('budgetBarFill').style.width='0%';
+  }
+  const bi = document.getElementById('budgetInput');
+  if (bi) bi.value = monthlyBudget||'';
+}
+
+function renderSummary() {
+  const txs=getMonthTxs();
+  const spent=txs.reduce((s,t)=>s+t.amount,0);
+  const isr=txs.filter(t=>t.card==='isracard'), cal=txs.filter(t=>t.card==='cal');
+  const fgn=txs.filter(t=>t.foreign), rec=txs.filter(t=>t.recurring);
+  document.getElementById('isracardTotal').textContent=fmt(isr.reduce((s,t)=>s+t.amount,0));
+  document.getElementById('isracardCount').textContent=isr.length+' עסקאות';
+  document.getElementById('calTotal').textContent=fmt(cal.reduce((s,t)=>s+t.amount,0));
+  document.getElementById('calCount').textContent=cal.length+' עסקאות';
+  document.getElementById('foreignTotal').textContent=fmt(fgn.reduce((s,t)=>s+t.amount,0));
+  document.getElementById('foreignCount').textContent=fgn.length+' עסקאות';
+  document.getElementById('recurringTotal').textContent=fmt(rec.reduce((s,t)=>s+t.amount,0));
+  document.getElementById('recurringCount').textContent=rec.length+' עסקאות';
+
+  // Budget row in summary grid
+  document.getElementById('summBudgetSpent').textContent=fmt(spent);
+  if (monthlyBudget>0) {
+    const rem=monthlyBudget-spent;
+    const pct=Math.min((spent/monthlyBudget)*100,100);
+    const col=pct>100?'var(--accent2)':pct>80?'var(--warn)':'var(--accent3)';
+    const labelEl=document.getElementById('summBudgetLabel');
+    labelEl.textContent='מתוך ₪'+fmt(monthlyBudget);
+    labelEl.style.color='#4da6ff';
+    document.getElementById('summBudgetPct').textContent=pct.toFixed(0)+'% נוצל';
+    const remEl=document.getElementById('summBudgetRemaining');
+    remEl.textContent=(rem<0?'חריגה ':'נותר ')+(rem<0?'-':'')+'₪'+fmt(Math.abs(rem));
+    remEl.style.color=rem<0?'var(--accent2)':'var(--accent3)';
+    document.getElementById('summBudgetBar').style.width=pct+'%';
+    document.getElementById('summBudgetBar').style.background=col;
+  } else {
+    document.getElementById('summBudgetLabel').textContent='לחץ על עריכה להגדרת תקציב';
+    document.getElementById('summBudgetPct').textContent='';
+    document.getElementById('summBudgetRemaining').textContent='';
+    document.getElementById('summBudgetBar').style.width='0%';
+  }
+}
+
+function renderChart() {
+  const el=document.getElementById('weekChart');
+  const today=new Date();
+  const days=Array.from({length:7},(_,i)=>{ const d=new Date(today); d.setDate(d.getDate()-(6-i)); return d; });
+  const amounts=days.map(d=>{ const ds=d.toISOString().split('T')[0]; return transactions.filter(t=>t.date===ds).reduce((s,t)=>s+t.amount,0); });
+  const max=Math.max(...amounts,1);
+  const dn=['א','ב','ג','ד','ה','ו','ש'];
+  el.innerHTML=days.map((d,i)=>`<div class="bar-wrap"><div class="bar" style="height:${Math.max(amounts[i]/max*100,3).toFixed(0)}%;background:#6c63ff;opacity:${0.5+i*0.07}"></div><div class="bar-label">${dn[d.getDay()]}</div></div>`).join('');
+}
+
+function renderCategories() {
+  const txs=getMonthTxs();
+  const cats={};
+  txs.forEach(t=>{ const c=t.category||'אחר'; if(!cats[c]) cats[c]={total:0,items:[]}; cats[c].total+=t.amount; cats[c].items.push(t); });
+  const sorted=Object.entries(cats).sort((a,b)=>b[1].total-a[1].total);
+  const maxAmt=sorted[0]?.[1].total||1;
+  const el=document.getElementById('categoryList');
+  if(!sorted.length){el.innerHTML='<div class="empty-state"><div class="icon">📊</div><p>אין נתונים לחודש זה — טען דמו</p></div>';return;}
+  el.innerHTML=sorted.map(([name,data])=>{
+    const info=CATEGORIES[name]||CATEGORIES['אחר'];
+    const pct=(data.total/maxAmt*100).toFixed(0);
+    const items=[...data.items].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const rows=items.map(t=>{
+      const d=new Date(t.date);
+      const ds=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
+      return `<div class="cat-tx-item">
+        <span class="rec-btn ${t.recurring?'on':''}" onclick="event.stopPropagation();toggleRec('${t.id}')">${t.recurring?'⭐':'☆'}</span>
+        <div class="cat-tx-name">${t.name}</div>
+        ${t.recurring?'<span class="rec-badge">קבועה</span>':''}
+        <div class="cat-tx-date">${ds}</div>
+        <div class="cat-tx-amount">₪${fmt(t.amount)}</div>
+      </div>`;
+    }).join('');
+    const cid='cat-'+name.replace(/\s/g,'_');
+    return `<div class="category-item" id="${cid}">
+      <div class="cat-header" onclick="document.getElementById('${cid}').classList.toggle('open')">
+        <div class="cat-row">
+          <div class="cat-name"><span class="cat-emoji">${info.emoji}</span>${name}</div>
+          <div class="cat-right"><div style="text-align:left"><div class="cat-amount">₪${fmt(data.total)}</div><div class="cat-count">${data.items.length} עסקאות</div></div><span class="cat-chevron">▼</span></div>
+        </div>
+        <div class="cat-bar-bg"><div class="cat-bar" style="width:${pct}%;background:${info.color}"></div></div>
+      </div>
+      <div class="cat-detail">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTransactions() {
+  let txs=getMonthTxs();
+  const q=(document.getElementById('searchInput')?.value||'').toLowerCase();
+  if(q) txs=txs.filter(t=>t.name.toLowerCase().includes(q));
+  if(activeFilter==='isracard') txs=txs.filter(t=>t.card==='isracard');
+  else if(activeFilter==='cal') txs=txs.filter(t=>t.card==='cal');
+  else if(activeFilter==='foreign') txs=txs.filter(t=>t.foreign);
+  else if(activeFilter==='recurring') txs=txs.filter(t=>t.recurring);
+  txs.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const el=document.getElementById('txList');
+  if(!txs.length){el.innerHTML='<div class="empty-state"><div class="icon">🔍</div><p>לא נמצאו עסקאות</p></div>';return;}
+  el.innerHTML=txs.map(t=>{
+    const info=CATEGORIES[t.category||'אחר']||CATEGORIES['אחר'];
+    const badge=t.card==='isracard'?'<span class="tx-card-badge badge-isracard">ישראכרט</span>':'<span class="tx-card-badge badge-cal">כאל</span>';
+    const d=new Date(t.date);
+    const ds=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
+    return `<div class="tx-item">
+      <span class="tx-rec-btn ${t.recurring?'on':''}" onclick="toggleRec('${t.id}')">${t.recurring?'⭐':'☆'}</span>
+      <div class="tx-icon">${info.emoji}</div>
+      <div class="tx-info">
+        <div class="tx-name">${t.name}</div>
+        <div class="tx-meta">${badge}${t.foreign?'<span style="color:var(--accent3)">חו"ל</span>':''}${t.recurring?'<span style="background:rgba(255,169,77,.15);color:var(--warn);font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700">קבועה</span>':''}</div>
+      </div>
+      <div class="tx-right"><div class="tx-amount${t.foreign?' foreign':''}">₪${fmt(t.amount)}</div><div class="tx-date">${ds}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderMerchants() {
+  const txs=getMonthTxs();
+  const merchants={};
+  txs.forEach(t=>{ if(!merchants[t.name]) merchants[t.name]={total:0,items:[]}; merchants[t.name].total+=t.amount; merchants[t.name].items.push(t); });
+  // Sort descending by cumulative monthly total
+  const sorted=Object.entries(merchants).sort((a,b)=>b[1].total-a[1].total);
+  const el=document.getElementById('merchantList');
+  if(!sorted.length){el.innerHTML='<div class="empty-state"><div class="icon">🏪</div><p>אין נתונים</p></div>';return;}
+  el.innerHTML=sorted.map(([name,data],i)=>{
+    const mid='m'+i;
+    const items=[...data.items].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const rows=items.map(t=>{
+      const d=new Date(t.date);
+      const ds=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
+      return `<div class="merchant-tx"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px">${ds}</span></div><div class="merchant-tx-amount">₪${fmt(t.amount)}</div></div>`;
+    }).join('');
+    return `<div class="merchant-wrap" id="${mid}w">
+      <div class="merchant-item" onclick="toggleMerch('${mid}')">
+        <div class="merchant-rank">#${i+1}</div>
+        <div class="merchant-name">${name}</div>
+        <div class="merchant-count">${data.items.length}×</div>
+        <div class="merchant-amount">₪${fmt(data.total)}</div>
+        <span class="merchant-chevron">▼</span>
+      </div>
+      <div class="merchant-detail" id="${mid}d">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleMerch(id) {
+  const wrap=document.getElementById(id+'w');
+  if(!wrap) return;
+  const wasOpen=wrap.classList.contains('open');
+  document.querySelectorAll('.merchant-wrap').forEach(w=>w.classList.remove('open'));
+  if(!wasOpen) wrap.classList.add('open');
+}
+
+function toggleRec(id) {
+  const t=transactions.find(x=>String(x.id)===String(id));
+  if(!t) return;
+  t.recurring=!t.recurring;
+  saveAll(); render();
+  showToast(t.recurring?'⭐ סומנה כהוצאה קבועה':'הוצאה הוסרה מהקבועות');
+}
+
+function openBudgetModal() {
+  document.getElementById('budgetModalInput').value=monthlyBudget||'';
+  document.getElementById('budgetModal').classList.add('open');
+}
+function closeBudgetModal() { document.getElementById('budgetModal').classList.remove('open'); }
+function saveBudgetModal() {
+  const v=parseFloat(document.getElementById('budgetModalInput').value);
+  if(v>0){monthlyBudget=v;saveAll();renderBudget();closeBudgetModal();showToast('תקציב הוגדר: ₪'+fmt(v));}
+}
+function saveBudget() {
+  const v=parseFloat(document.getElementById('budgetInput').value);
+  if(v>0){monthlyBudget=v;saveAll();renderBudget();showToast('תקציב הוגדר: ₪'+fmt(v));}
+}
+
+function showPage(name,el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  if (name==='compare') renderCompare();
+}
+function changeMonth(dir) {
+  currentMonth+=dir;
+  if(currentMonth>11){currentMonth=0;currentYear++;}
+  if(currentMonth<0){currentMonth=11;currentYear--;}
+  render();
+}
+function setFilter(f,el) {
+  activeFilter=f;
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderTransactions();
+}
+
+function addManual() {
+  const name=document.getElementById('manualName').value.trim();
+  const amount=parseFloat(document.getElementById('manualAmount').value);
+  const date=document.getElementById('manualDate').value;
+  const card=document.getElementById('manualCard').value;
+  const recurring=document.getElementById('manualRecToggle').classList.contains('on');
+  if(!name||!amount||!date){showToast('נא למלא את כל השדות');return;}
+  transactions.push({id:Date.now(),name,amount,date,card,foreign:false,recurring,category:getCategory(name)});
+  saveAll();render();
+  document.getElementById('manualName').value='';
+  document.getElementById('manualAmount').value='';
+  document.getElementById('manualRecToggle').classList.remove('on');
+  showToast('העסקה נוספה ✓');
+}
+
+function loadDemo() {
+  transactions=[];
+  // Generate 3 months of data
+  for (let offset=2; offset>=0; offset--) {
+    let m=currentMonth-offset, y=currentYear;
+    while(m<0){m+=12;y--;}
+    const M=String(m+1).padStart(2,'0');
+    const base=[
+      {name:'שופרסל',amount:347+offset*30,card:'isracard',foreign:false,day:'03'},
+      {name:'Netflix',amount:54.90,card:'cal',foreign:true,day:'03'},
+      {name:'מקדונלד',amount:89+offset*10,card:'isracard',foreign:false,day:'05'},
+      {name:'AliExpress',amount:126+offset*20,card:'cal',foreign:true,day:'06'},
+      {name:'פז דלק',amount:280-offset*15,card:'isracard',foreign:false,day:'07'},
+      {name:'Spotify',amount:22.99,card:'cal',foreign:true,day:'08'},
+      {name:'שופרסל',amount:215+offset*25,card:'isracard',foreign:false,day:'17'},
+      {name:'Google YouTube',amount:35.90,card:'isracard',foreign:true,day:'10'},
+      {name:'סופר-פארם',amount:143-offset*10,card:'cal',foreign:false,day:'12'},
+      {name:'Gett Taxi',amount:67.50,card:'isracard',foreign:false,day:'13'},
+      {name:'קפה קפה',amount:54+offset*5,card:'cal',foreign:false,day:'14'},
+      {name:'Amazon',amount:189+offset*30,card:'cal',foreign:true,day:'15'},
+      {name:'מכבי בריאות',amount:75,card:'isracard',foreign:false,day:'18'},
+      {name:'H&M',amount:320-offset*40,card:'cal',foreign:false,day:'19'},
+      {name:'yes דיגיטל',amount:99,card:'cal',foreign:false,day:'22'},
+      {name:'סונול',amount:250-offset*20,card:'isracard',foreign:false,day:'23'},
+      {name:'Disney+',amount:39.90,card:'cal',foreign:true,day:'25'},
+    ];
+    base.forEach((t,i)=>{
+      transactions.push({id:Date.now()+offset*100+i,name:t.name,amount:t.amount,date:`${y}-${M}-${t.day}`,card:t.card,foreign:t.foreign,recurring:['Netflix','Spotify','Google YouTube','yes דיגיטל','מכבי בריאות'].includes(t.name),category:getCategory(t.name)});
+    });
+  }
+  monthlyBudget=8000;
+  saveAll();render();renderCompare();showToast('נתוני דוגמה נטענו — 3 חודשים ✓');
+}
+function clearAll(){transactions=[];monthlyBudget=0;saveAll();render();showToast('הנתונים נמחקו');}
+
+window.parseSMS=function(text){
+  let tx={id:Date.now(),foreign:false,recurring:false};
+  const im=text.match(/אושרה עסקה ב[־\-](\d{2}\/\d{2}) בסך ([\d.]+)\s*(ILS|USD|EUR)?\s*ב[־\-](.+?)(?:\.|$|\n)/);
+  if(im){const[,ds,amount,,name]=im;const[day,month]=ds.split('/');tx.date=`${currentYear}-${month}-${day}`;tx.amount=parseFloat(amount);tx.name=name.trim().replace(/\s*-\s*UNITED STATES.*$/i,'').trim();tx.card='isracard';tx.foreign=text.includes('UNITED STATES')||text.includes('USD');}
+  const cm=text.match(/בתאריך (\d{2}\/\d{2}).*?ב[־\-](.+?)\s+בסך ([\d.]+)\s*ש/);
+  if(cm){const[,ds,name,amount]=cm;const[day,month]=ds.split('/');tx.date=`${currentYear}-${month}-${day}`;tx.amount=parseFloat(amount);tx.name=name.trim();tx.card='cal';tx.foreign=text.includes('חו"ל');}
+  if(tx.name){tx.category=getCategory(tx.name);transactions.push(tx);saveAll();render();return tx;}
+  return null;
+};
+
+// ===== COMPARISON =====
+let cmpRange = 3;
+let cmpView = 'category';
+
+function setCmpRange(n, el) {
+  cmpRange = n;
+  document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderCompare();
+}
+function setCmpView(v, el) {
+  cmpView = v;
+  document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderCompare();
+}
+
+// get list of months to compare: current month going back cmpRange months
+function getCmpMonths() {
+  const months = [];
+  for (let i = cmpRange-1; i >= 0; i--) {
+    let m = currentMonth - i;
+    let y = currentYear;
+    while (m < 0) { m += 12; y--; }
+    months.push({m, y});
+  }
+  return months;
+}
+
+function getTxsForMonth(m, y) {
+  return transactions.filter(t => {
+    const d = new Date(t.date);
+    return d.getMonth() === m && d.getFullYear() === y;
+  });
+}
+
+function renderCompare() {
+  const months = getCmpMonths();
+  const monthNames = months.map(({m,y}) => MONTHS_HE[m].slice(0,3) + (y!==currentYear?`'${String(y).slice(2)}`:''));
+
+  // Build data per month
+  const monthData = months.map(({m,y}) => getTxsForMonth(m,y));
+  const totals = monthData.map(txs => txs.reduce((s,t)=>s+t.amount,0));
+
+  // Summary pills
+  const avgTotal = totals.filter(t=>t>0).reduce((s,t)=>s+t,0) / (totals.filter(t=>t>0).length||1);
+  const maxTotal = Math.max(...totals);
+  const maxMonthIdx = totals.indexOf(maxTotal);
+  const trend = totals[totals.length-1] - totals[totals.length-2];
+
+  const summaryEl = document.getElementById('cmpSummary');
+  summaryEl.innerHTML = [
+    `<div class="cmp-pill"><div class="cmp-pill-label">ממוצע חודשי</div><div class="cmp-pill-val">₪${fmt(avgTotal)}</div><div class="cmp-pill-sub">לחודש</div></div>`,
+    `<div class="cmp-pill"><div class="cmp-pill-label">חודש שיא</div><div class="cmp-pill-val" style="font-size:14px">${MONTHS_HE[months[maxMonthIdx].m]}</div><div class="cmp-pill-sub">₪${fmt(maxTotal)}</div></div>`,
+    totals.length>=2 ? `<div class="cmp-pill"><div class="cmp-pill-label">מגמה</div><div class="cmp-pill-val" style="color:${trend>0?'var(--accent2)':'var(--accent3)'};font-size:16px">${trend>0?'▲':'▼'} ₪${fmt(Math.abs(trend))}</div><div class="cmp-pill-sub">לעומת חודש קודם</div></div>` : '',
+  ].join('');
+
+  const cols = 1 + months.length;
+  const gridCols = `1.8fr ${months.map(()=>'1fr').join(' ')}`;
+
+  let html = `<div class="compare-table">`;
+
+  // TOP TOTAL ROW — סה"כ + תקציב
+  const topTotalCells = totals.map((t,i) => {
+    const isCurrentMonth = (months[i].m === currentMonth && months[i].y === currentYear);
+    const budgetLine = (isCurrentMonth && monthlyBudget>0)
+      ? `<div style="font-size:9px;color:var(--text-dim);margin-top:2px">מתוך ₪${fmt(monthlyBudget)}</div>`
+      : '';
+    const barLine = (isCurrentMonth && monthlyBudget>0) ? (() => {
+      const pct = Math.min((t/monthlyBudget)*100,100).toFixed(0);
+      const col = t>monthlyBudget?'var(--accent2)':t>monthlyBudget*0.8?'var(--warn)':'var(--accent3)';
+      return `<div style="height:3px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${col};border-radius:2px"></div></div>`;
+    })() : '';
+    return `<div style="text-align:center"><div style="font-size:14px;font-weight:900">₪${fmt(t)}</div>${budgetLine}${barLine}</div>`;
+  }).join('');
+  html += `<div style="display:grid;grid-template-columns:${gridCols};padding:14px;background:rgba(108,99,255,0.10);border-bottom:2px solid var(--accent);align-items:center;gap:4px">
+    <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px">סה"כ חודשי</div>
+    ${topTotalCells}
+  </div>`;
+  html += `<div class="compare-thead" style="grid-template-columns:${gridCols}">
+    <div class="th" style="text-align:right">קטגוריה / בית עסק</div>
+    ${monthNames.map(n=>`<div class="th">${n}</div>`).join('')}
+  </div>`;
+
+  if (cmpView === 'category') {
+    // Gather all categories across all months
+    const allCats = new Set();
+    monthData.forEach(txs => txs.forEach(t => allCats.add(t.category||'אחר')));
+    const catList = [...allCats].sort((a,b) => {
+      const totA = monthData.reduce((s,txs)=>s+txs.filter(t=>(t.category||'אחר')===a).reduce((ss,t)=>ss+t.amount,0),0);
+      const totB = monthData.reduce((s,txs)=>s+txs.filter(t=>(t.category||'אחר')===b).reduce((ss,t)=>ss+t.amount,0),0);
+      return totB - totA;
+    });
+
+    catList.forEach((cat, ci) => {
+      const info = CATEGORIES[cat] || CATEGORIES['אחר'];
+      const catAmounts = monthData.map(txs => txs.filter(t=>(t.category||'אחר')===cat).reduce((s,t)=>s+t.amount,0));
+      const drillId = 'cmpcat'+ci;
+
+      // Gather merchants in this category across months
+      const merchantsInCat = new Set();
+      monthData.forEach(txs => txs.filter(t=>(t.category||'אחר')===cat).forEach(t=>merchantsInCat.add(t.name)));
+      const merchantList = [...merchantsInCat].sort((a,b)=>{
+        const totA=monthData.reduce((s,txs)=>s+txs.filter(t=>t.name===a).reduce((ss,t)=>ss+t.amount,0),0);
+        const totB=monthData.reduce((s,txs)=>s+txs.filter(t=>t.name===b).reduce((ss,t)=>ss+t.amount,0),0);
+        return totB-totA;
+      });
+
+      // Color change indicator on last two months
+      const last = catAmounts[catAmounts.length-1];
+      const prev = catAmounts[catAmounts.length-2] || 0;
+      const cells = catAmounts.map((amt,i) => {
+        let cls = amt===0?'zero':'';
+        if (i===catAmounts.length-1 && prev>0) cls = amt>prev*1.1?'up':amt<prev*0.9?'down':'';
+        return `<div class="cmp-cell ${cls}">${amt>0?'₪'+fmt(amt):'—'}</div>`;
+      }).join('');
+
+      // Merchant drill rows
+      const drillRows = merchantList.map(name => {
+        const mAmounts = monthData.map(txs => txs.filter(t=>t.name===name).reduce((s,t)=>s+t.amount,0));
+        const mCells = mAmounts.map(a=>`<div class="cmp-merch-cell ${a>0?'has-val':''}">${a>0?'₪'+fmt(a):'—'}</div>`).join('');
+        return `<div class="cmp-merch-row" style="grid-template-columns:${gridCols}">
+          <div class="cmp-merch-name">• ${name}</div>${mCells}
+        </div>`;
+      }).join('');
+
+      html += `<div class="cmp-cat-wrap" id="${drillId}w">
+        <div class="cmp-cat-row" style="grid-template-columns:${gridCols}" onclick="toggleCmpDrill('${drillId}')">
+          <div class="cmp-cat-name"><span class="cmp-cat-emoji">${info.emoji}</span>${cat}<span class="cmp-chevron">▼</span></div>
+          ${cells}
+        </div>
+        <div class="cmp-drill" id="${drillId}d">${drillRows}</div>
+      </div>`;
+    });
+
+  } else if (cmpView === 'merchant') {
+    // All merchants across months sorted by total
+    const allMerch = new Set();
+    monthData.forEach(txs => txs.forEach(t => allMerch.add(t.name)));
+    const merchList = [...allMerch].sort((a,b) => {
+      const tA=monthData.reduce((s,txs)=>s+txs.filter(t=>t.name===a).reduce((ss,t)=>ss+t.amount,0),0);
+      const tB=monthData.reduce((s,txs)=>s+txs.filter(t=>t.name===b).reduce((ss,t)=>ss+t.amount,0),0);
+      return tB-tA;
+    });
+
+    // Header for merchant view
+    html += merchList.map(name => {
+      const info = CATEGORIES[getCategory(name)] || CATEGORIES['אחר'];
+      const mAmounts = monthData.map(txs => txs.filter(t=>t.name===name).reduce((s,t)=>s+t.amount,0));
+      const last = mAmounts[mAmounts.length-1], prev = mAmounts[mAmounts.length-2]||0;
+      const cells = mAmounts.map((amt,i) => {
+        let cls = amt===0?'zero':'';
+        if (i===mAmounts.length-1 && prev>0) cls = amt>prev*1.1?'up':amt<prev*0.9?'down':'';
+        return `<div class="cmp-cell ${cls}">${amt>0?'₪'+fmt(amt):'—'}</div>`;
+      }).join('');
+      return `<div class="cmp-cat-wrap">
+        <div class="cmp-cat-row" style="grid-template-columns:${gridCols}">
+          <div class="cmp-cat-name"><span class="cmp-cat-emoji">${info.emoji}</span>${name}</div>${cells}
+        </div>
+      </div>`;
+    }).join('');
+
+  } else { // card view
+    ['ישראכרט','ויזה כאל'].forEach((label,ci) => {
+      const key = ci===0?'isracard':'cal';
+      const cAmounts = monthData.map(txs => txs.filter(t=>t.card===key).reduce((s,t)=>s+t.amount,0));
+      const cells = cAmounts.map(a=>`<div class="cmp-cell ${a===0?'zero':''}">${a>0?'₪'+fmt(a):'—'}</div>`).join('');
+      html += `<div class="cmp-cat-wrap">
+        <div class="cmp-cat-row" style="grid-template-columns:${gridCols}">
+          <div class="cmp-cat-name">${ci===0?'💳':'💳'} ${label}</div>${cells}
+        </div>
+      </div>`;
+    });
+    // Foreign row
+    const fAmounts = monthData.map(txs => txs.filter(t=>t.foreign).reduce((s,t)=>s+t.amount,0));
+    const fCells = fAmounts.map(a=>`<div class="cmp-cell ${a===0?'zero':''}">${a>0?'₪'+fmt(a):'—'}</div>`).join('');
+    html += `<div class="cmp-cat-wrap"><div class="cmp-cat-row" style="grid-template-columns:${gridCols}"><div class="cmp-cat-name">🌍 חו"ל</div>${fCells}</div></div>`;
+  }
+
+  // TOTAL ROW (bottom)
+  const totalCells = totals.map(t=>`<div class="cmp-total-cell">₪${fmt(t)}</div>`).join('');
+  html += `<div class="cmp-total-row" style="grid-template-columns:${gridCols}">
+    <div class="cmp-total-label">סה"כ</div>${totalCells}
+  </div>`;
+
+  html += `</div>`;
+
+  if (transactions.length === 0) {
+    document.getElementById('compareTable').innerHTML = '<div class="empty-state"><div class="icon">📈</div><p>אין נתונים — טען דמו מעמוד ➕</p></div>';
+    summaryEl.innerHTML = '';
+  } else {
+    document.getElementById('compareTable').innerHTML = html;
+  }
+}
+
+function toggleCmpDrill(id) {
+  const wrap = document.getElementById(id+'w');
+  if (!wrap) return;
+  wrap.classList.toggle('open');
+}
+
+document.getElementById('manualDate').valueAsDate=new Date();
+loadAll().then(()=>{ render(); renderCompare(); setTimeout(syncFromSheets, 500); });
+</script>
+</body>
+</html>
