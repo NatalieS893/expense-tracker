@@ -204,30 +204,48 @@
   .cmp-merch-cell { text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); }
   .cmp-merch-cell.has-val { color:var(--text); }
 
-  /* TOTAL ROW */
-  .cmp-total-row { display:grid; padding:12px 14px; background:rgba(108,99,255,0.08); border-top:1px solid var(--accent); align-items:center; }
-  .cmp-total-label { font-size:12px; font-weight:700; color:var(--accent); }
-  .cmp-total-cell { text-align:center; font-size:13px; font-weight:900; }
-
-  /* TREND SPARKLINE */
-  .cmp-trend { display:flex; align-items:flex-end; gap:2px; height:20px; margin:0 auto; width:50px; }
-  .cmp-spark { flex:1; border-radius:2px 2px 0 0; min-height:2px; background:var(--accent); opacity:0.6; }
-
-  /* SUMMARY PILLS */
-  .cmp-summary { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; margin-bottom:14px; padding-bottom:2px; }
-  .cmp-summary::-webkit-scrollbar { display:none; }
-  .cmp-pill { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 14px; flex-shrink:0; min-width:100px; }
-  .cmp-pill-label { font-size:9px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; }
-  .cmp-pill-val { font-size:17px; font-weight:900; letter-spacing:-0.5px; }
-  .cmp-pill-sub { font-size:10px; color:var(--text-dim); margin-top:2px; }
+  /* CATEGORY MODAL */
+  .cat-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:flex-end; justify-content:center; }
+  .cat-modal-overlay.open { display:flex; }
+  .cat-modal { background:var(--surface); border-radius:20px 20px 0 0; padding:20px; width:100%; max-width:600px; max-height:85vh; overflow-y:auto; }
+  .cat-modal-title { font-size:14px; font-weight:700; margin-bottom:4px; }
+  .cat-modal-sub { font-size:12px; color:var(--text-dim); margin-bottom:16px; }
+  .cat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+  .cat-btn { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 6px; cursor:pointer; text-align:center; font-family:'Heebo',sans-serif; color:var(--text); transition:all 0.15s; }
+  .cat-btn:hover { border-color:var(--accent); }
+  .cat-btn.selected { border-color:var(--accent); background:rgba(108,99,255,0.15); }
+  .cat-btn .cat-emoji { font-size:20px; display:block; margin-bottom:4px; }
+  .cat-btn .cat-name { font-size:10px; font-weight:600; }
+  .cat-modal-actions { display:flex; gap:8px; }
+  .cat-apply-all { flex:1; background:var(--accent); color:#fff; border:none; border-radius:10px; padding:12px; font-family:'Heebo',sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
+  .cat-apply-one { flex:1; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:12px; font-family:'Heebo',sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
+  .cat-close { background:none; border:none; color:var(--text-dim); font-size:20px; cursor:pointer; float:left; }
 </style>
 </head>
 <body>
+
+<!-- CATEGORY MODAL -->
+<div class="cat-modal-overlay" id="catModal">
+  <div class="cat-modal">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+      <div class="cat-modal-title" id="catModalName"></div>
+      <button class="cat-close" onclick="closeCatModal()">✕</button>
+    </div>
+    <div class="cat-modal-sub" id="catModalSub"></div>
+    <div class="cat-grid" id="catGrid"></div>
+    <div class="cat-modal-actions">
+      <button class="cat-apply-one" onclick="applyCat(false)">החל על עסקה זו</button>
+      <button class="cat-apply-all" onclick="applyCat(true)">החל על כולן ✓</button>
+    </div>
+  </div>
+</div>
 
 <div class="header">
   <div class="logo">כסף<span>חכם</span></div>
   <div style="display:flex;align-items:center;gap:8px">
     <button onclick="syncFromSheets()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="סנכרן מ-Google Sheets">🔄</button>
+    <button onclick="document.getElementById('csvInput').click()" style="background:var(--surface2);border:1px solid var(--border);color:var(--warn);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="ייבוא CSV מ-Sheets">📥</button>
+    <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="importCSV(this)">
     <div class="month-nav">
       <button onclick="changeMonth(-1)">›</button>
       <div class="month-label" id="monthLabel"></div>
@@ -394,7 +412,10 @@
         <button class="view-btn" onclick="setCmpView('card',this)">💳 כרטיס</button>
       </div>
     </div>
-    <div class="cmp-summary" id="cmpSummary"></div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px">
+      <div style="font-size:11px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">סה"כ הוצאות חודשיות</div>
+      <canvas id="cmpLineChart" height="120"></canvas>
+    </div>
     <div id="compareTable"></div>
   </div>
 </div>
@@ -410,8 +431,9 @@
 <!-- BUDGET MODAL -->
 <div class="modal-overlay" id="budgetModal" onclick="if(event.target===this)closeBudgetModal()">
   <div class="modal">
-    <div class="modal-title">הגדרת תקציב חודשי</div>
-    <div class="field"><label class="lbl">תקציב (₪)</label><input id="budgetModalInput" type="number" placeholder="למשל: 20000" class="inp"></div>
+    <div class="modal-title" id="budgetModalTitle">הגדרת תקציב חודשי</div>
+    <div class="field"><label class="lbl">תקציב (₪)</label><input id="budgetModalInput" type="number" placeholder="למשל: 18000" class="inp"></div>
+    <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px">ברירת מחדל: ₪18,000 — ניתן להגדיר סכום שונה לכל חודש</div>
     <button class="btn-primary" onclick="saveBudgetModal()">שמור</button>
     <button class="btn-secondary" onclick="closeBudgetModal()">ביטול</button>
   </div>
@@ -421,7 +443,8 @@
 
 <script>
 let transactions = [];
-let monthlyBudget = 0;
+let monthlyBudget = 18000;
+let budgetsByMonth = {}; // תקציב לפי חודש: '2026-03' -> 18000
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
 let activeFilter = 'all';
@@ -429,19 +452,29 @@ let activeFilter = 'all';
 const MONTHS_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
 const CATEGORIES = {
-  'מזון וסופר':    { emoji:'🛒', color:'#6c63ff', keywords:['שופרסל','רמי לוי','מגה','סופר','קופיקס','אושר עד','יינות','סיטי'] },
-  'מסעדות ואוכל': { emoji:'🍔', color:'#ff6584', keywords:['מקדונלד','בורגר','פיצה','שווארמה','סושי','קפה','cafe','coffee','food','מסעדה','שניצל','קינג'] },
-  'דלק ורכב':     { emoji:'⛽', color:'#ffa94d', keywords:['דלק','paz','sonol','delek','פז','סונול','ten','טן'] },
-  'בריאות':        { emoji:'💊', color:'#43d9a0', keywords:['מכבי','כללית','לאומית','בית מרקחת','pharma','סופר-פארם','superpharm'] },
-  'בידור ומנויים':{ emoji:'🎬', color:'#da77f2', keywords:['netflix','spotify','youtube','amazon prime','apple','disney','cinema','yes','hot','deezer'] },
-  'קניות':         { emoji:'🛍️', color:'#ff8787', keywords:['aliexpress','amazon','zara','h&m','castro','fox','renuar','next','golf','asos'] },
-  'תחבורה':        { emoji:'🚌', color:'#74c0fc', keywords:['רב-קו','gett','uber','taxi','bus','אגד','דן','rail','wolt','bolt'] },
-  'חשמל ובית':    { emoji:'🏠', color:'#ffd43b', keywords:['חשמל','מים','גז','ועד','ארנונה','internet','bezeq','hot','012','cellcom','partner'] },
-  'אחר':           { emoji:'📦', color:'#868e96', keywords:[] }
+  'מזון וסופר':      { emoji:'🛒', color:'#6c63ff', keywords:['שופרסל','רמי לוי','מגה','סופר','קופיקס','אושר עד','יינות','סיטי','להב','עגבניה','סופר בונוס'] },
+  'מסעדות ואוכל':   { emoji:'🍔', color:'#ff6584', keywords:['מקדונלד','בורגר','פיצה','שווארמה','סושי','קפה','cafe','coffee','food','מסעדה','שניצל','קינג','מסאו'] },
+  'דלק ורכב':        { emoji:'⛽', color:'#ffa94d', keywords:['דלק','paz','sonol','delek','פז','סונול','ten','טן','AIG ביטוח רכב','ביטוח רכב'] },
+  'בריאות':          { emoji:'💊', color:'#43d9a0', keywords:['מכבי','כללית','לאומית','בית מרקחת','pharma','סופר-פארם','superpharm','סופרפארם','רופא','קופת'] },
+  'בידור ומנויים':  { emoji:'🎬', color:'#da77f2', keywords:['netflix','spotify','youtube','amazon prime','apple','disney','cinema','yes','hot','deezer','מפעל הפיס'] },
+  'קניות':           { emoji:'🛍️', color:'#ff8787', keywords:['aliexpress','amazon','zara','h&m','castro','fox','renuar','next','golf','asos','shein','SHEIN'] },
+  'תחבורה':          { emoji:'🚌', color:'#74c0fc', keywords:['רב-קו','gett','uber','taxi','bus','אגד','דן','rail','wolt','bolt','פנגו','מוביט','תחבורה'] },
+  'חשמל ותקשורת':   { emoji:'💡', color:'#ffd43b', keywords:['חשמל','מים','גז יגל','ועד','ארנונה','internet','bezeq','hot','012','cellcom','partner','פרטנר','פלאפון','לזוז','בזק','סלקום','012','HOT'] },
+  'ספורט וכושר':    { emoji:'🏋️', color:'#ff8c00', keywords:['מכון כושר','ספורט','fitness','gym','כושר','שחייה','טניס','כדורגל','כדורסל'] },
+  'חוגים':           { emoji:'🎨', color:'#cc5de8', keywords:['חוג','סטודיו','מרכז קהילתי','רשת מרכזים','נבון','בית ספר'] },
+  'העברות':          { emoji:'💸', color:'#94d82d', keywords:['bit','ביט','העברה','paybox','PAYBOX','העברה ב','BIT'] },
+  'ביטוח ופיננסים': { emoji:'💰', color:'#51cf66', keywords:['ביטוח','מנורה','הפניקס','כלל','מגדל','הראל','ישיר','בטוח','AIG','חיים','בריאות'] },
+  'חינוך':           { emoji:'📚', color:'#339af0', keywords:['בית ספר','אוניברסיטה','מכללה','תיאוריה','קורס','חינוך','נבון','אנקורי'] },
+  'מיסים ותשלומים': { emoji:'🏛️', color:'#f06595', keywords:['עירייה','ארנונה','מס','עיריית','מוסדות'] },
+  'חול':            { emoji:'✈️', color:'#20c997', keywords:['USA','LUX','Mountain View','EUR','USD'] },
+  'אחר':             { emoji:'📦', color:'#868e96', keywords:[] }
 };
 
 function getCategory(name) {
-  const n = (name||'').toLowerCase();
+  if (!name) return 'אחר';
+  // בדוק זיכרון קטגוריות קודם
+  if (merchantCategories[name]) return merchantCategories[name];
+  const n = name.toLowerCase();
   for (const [cat, d] of Object.entries(CATEGORIES)) {
     if (cat==='אחר') continue;
     if (d.keywords.some(k=>n.includes(k.toLowerCase()))) return cat;
@@ -449,21 +482,56 @@ function getCategory(name) {
   return 'אחר';
 }
 
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzYO2OG02huQFZayGdBFMiKaIFkLktP7sUYipJr4wlVZjV2xQnKrypsSbfwe3oVo4-K/exec';
-function syncFromSheets() {
-  const callbackName = 'sheetsCB_' + Date.now();
-  const script = document.createElement('script');
-  script.src = SHEETS_URL + '?callback=' + callbackName + '&t=' + Date.now();
-  let done = false;
-  const cleanup = () => { 
-    done = true;
-    delete window[callbackName]; 
-    if (document.body.contains(script)) document.body.removeChild(script); 
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwuBHfEq9OEYcckCrJ2ltHUH_AZ0kPiqQDkIz7U8v4DP6LRxOKq5MP3HM5ssogKnOr9/exec';
+
+function importCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { showToast('קובץ ריק'); return; }
+    // detect separator
+    const sep = lines[0].includes('\t') ? '\t' : ',';
+    const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g,''));
+    const existing = new Set(transactions.map(t => t.date+'|'+t.name+'|'+t.amount));
+    let added = 0;
+    lines.slice(1).forEach(line => {
+      const cols = line.split(sep).map(c => c.trim().replace(/"/g,''));
+      const row = {};
+      headers.forEach((h,i) => row[h] = cols[i] || '');
+      // try to find date, name, amount columns
+      const date = row['תאריך'] || row['date'] || row['Date'] || '';
+      const name = row['שם בית עסק'] || row['name'] || row['שם'] || row['בית עסק'] || '';
+      const amount = parseFloat((row['סכום'] || row['amount'] || row['Amount'] || '0').replace(/[,₪]/g,''));
+      const card = row['כרטיס'] || row['card'] || 'cal';
+      if (!date || !name || !amount) return;
+      const key = date+'|'+name+'|'+amount;
+      if (existing.has(key)) return;
+      existing.add(key);
+      transactions.push({
+        id: Date.now()+Math.random(),
+        date, name, amount,
+        card: card.toLowerCase(),
+        foreign: (row['חול']||'') === 'כן',
+        recurring: false,
+        category: row['קטגוריה'] || getCategory(name)
+      });
+      added++;
+    });
+    input.value = '';
+    if (added > 0) { saveAll(); render(); renderCompare(); showToast(`יובאו ${added} עסקאות ✓`); }
+    else showToast('אין עסקאות חדשות לייבוא');
   };
-  script.onerror = () => { cleanup(); showToast('שגיאת סנכרון — בדקי חיבור'); };
-  setTimeout(() => { if (!done) { cleanup(); showToast('שגיאת סנכרון — בדקי חיבור'); } }, 10000);
-  window[callbackName] = function(rows) {
-    cleanup();
+  reader.readAsText(file, 'UTF-8');
+}
+
+async function syncFromSheets() {
+  try {
+    const res = await fetch(SHEETS_URL, {redirect: 'follow'});
+    const text = await res.text();
+    let rows;
+    try { rows = JSON.parse(text); } catch(e) { throw new Error('parse error'); }
     if (!Array.isArray(rows) || rows.length===0) { showToast('הכל מעודכן ✓'); return; }
     const existing = new Set(transactions.map(t=>t.date+'|'+t.name+'|'+t.amount));
     let added = 0;
@@ -485,8 +553,7 @@ function syncFromSheets() {
     });
     if (added>0) { saveAll(); render(); renderCompare(); showToast(`סונכרנו ${added} עסקאות חדשות ✓`); }
     else showToast('הכל מעודכן ✓');
-  };
-  document.body.appendChild(script);
+  } catch(e) { showToast('שגיאת סנכרון — בדקי חיבור'); }
 }
 
 async function pushToSheets(tx) {
@@ -501,15 +568,17 @@ async function pushToSheets(tx) {
   } catch(e) {}
 }
 
+let merchantCategories = {}; // זיכרון קטגוריות לפי שם עסק
+
 async function saveAll() {
-  const p = JSON.stringify({transactions, budget:monthlyBudget});
+  const p = JSON.stringify({transactions, budget:monthlyBudget, merchantCategories, budgetsByMonth});
   try { await window.storage.set('ksf-data', p); } catch(e) { localStorage.setItem('ksf-data', p); }
 }
 async function loadAll() {
   try {
     let raw;
     try { const r = await window.storage.get('ksf-data'); raw = r?.value; } catch(e) { raw = localStorage.getItem('ksf-data'); }
-    if (raw) { const d = JSON.parse(raw); transactions=d.transactions||[]; monthlyBudget=d.budget||0; }
+    if (raw) { const d = JSON.parse(raw); transactions=d.transactions||[]; monthlyBudget=d.budget||18000; merchantCategories=d.merchantCategories||{}; budgetsByMonth=d.budgetsByMonth||{}; }
   } catch(e) {}
 }
 
@@ -530,10 +599,11 @@ function render() {
 function renderBudget() {
   const txs = getMonthTxs();
   const spent = txs.reduce((s,t)=>s+t.amount,0);
+  const budget = getMonthBudget();
   document.getElementById('budgetSpent').textContent = fmt(spent);
-  if (monthlyBudget>0) {
-    const rem = monthlyBudget-spent;
-    const pct = Math.min((spent/monthlyBudget)*100,100);
+  if (budget>0) {
+    const rem = budget-spent;
+    const pct = Math.min((spent/budget)*100,100);
     const remEl = document.getElementById('budgetRemaining');
     remEl.textContent = (rem<0?'-':'')+'₪'+fmt(Math.abs(rem));
     remEl.style.color = rem<0?'var(--accent2)':'var(--accent3)';
@@ -541,7 +611,7 @@ function renderBudget() {
     bar.style.width = pct+'%';
     bar.style.background = pct>90?'var(--accent2)':pct>70?'var(--warn)':'var(--accent3)';
     document.getElementById('budgetPct').textContent = pct.toFixed(0)+'% מהתקציב נוצל';
-    document.getElementById('budgetTotal').textContent = 'מתוך ₪'+fmt(monthlyBudget);
+    document.getElementById('budgetTotal').textContent = 'מתוך ₪'+fmt(budget);
   } else {
     document.getElementById('budgetRemaining').textContent='—';
     document.getElementById('budgetPct').textContent='לחץ על עריכה להגדרת תקציב';
@@ -549,7 +619,7 @@ function renderBudget() {
     document.getElementById('budgetBarFill').style.width='0%';
   }
   const bi = document.getElementById('budgetInput');
-  if (bi) bi.value = monthlyBudget||'';
+  if (bi) bi.value = budget||'';
 }
 
 function renderSummary() {
@@ -568,12 +638,13 @@ function renderSummary() {
 
   // Budget row in summary grid
   document.getElementById('summBudgetSpent').textContent=fmt(spent);
-  if (monthlyBudget>0) {
-    const rem=monthlyBudget-spent;
-    const pct=Math.min((spent/monthlyBudget)*100,100);
+  const budget=getMonthBudget();
+  if (budget>0) {
+    const rem=budget-spent;
+    const pct=Math.min((spent/budget)*100,100);
     const col=pct>100?'var(--accent2)':pct>80?'var(--warn)':'var(--accent3)';
     const labelEl=document.getElementById('summBudgetLabel');
-    labelEl.textContent='מתוך ₪'+fmt(monthlyBudget);
+    labelEl.textContent='מתוך ₪'+fmt(budget);
     labelEl.style.color='#4da6ff';
     document.getElementById('summBudgetPct').textContent=pct.toFixed(0)+'% נוצל';
     const remEl=document.getElementById('summBudgetRemaining');
@@ -652,14 +723,18 @@ function renderTransactions() {
     const badge=t.card==='isracard'?'<span class="tx-card-badge badge-isracard">ישראכרט</span>':'<span class="tx-card-badge badge-cal">כאל</span>';
     const d=new Date(t.date);
     const ds=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
-    return `<div class="tx-item">
-      <span class="tx-rec-btn ${t.recurring?'on':''}" onclick="toggleRec('${t.id}')">${t.recurring?'⭐':'☆'}</span>
+    const cat = t.category || 'אחר';
+    const catColor = cat === 'אחר' ? 'var(--accent2)' : 'var(--text-dim)';
+    const catLabel = cat === 'אחר' ? '⚠️ לא מקוטלג' : `${info.emoji} ${cat}`;
+    return `<div class="tx-item" onclick="openCatModal('${t.id}')" style="cursor:pointer">
+      <span class="tx-rec-btn ${t.recurring?'on':''}" onclick="event.stopPropagation();toggleRec('${t.id}')">${t.recurring?'⭐':'☆'}</span>
       <div class="tx-icon">${info.emoji}</div>
       <div class="tx-info">
         <div class="tx-name">${t.name}</div>
-        <div class="tx-meta">${badge}${t.foreign?'<span style="color:var(--accent3)">חו"ל</span>':''}${t.recurring?'<span style="background:rgba(255,169,77,.15);color:var(--warn);font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700">קבועה</span>':''}</div>
+        <div class="tx-meta">${badge}${t.foreign?'<span style="color:var(--accent3)">חו"ל</span>':''}${t.recurring?'<span style="background:rgba(255,169,77,.15);color:var(--warn);font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700">קבועה</span>':''}<span style="color:${catColor};font-size:9px;margin-right:4px">${catLabel}</span></div>
       </div>
       <div class="tx-right"><div class="tx-amount${t.foreign?' foreign':''}">₪${fmt(t.amount)}</div><div class="tx-date">${ds}</div></div>
+      <button onclick="event.stopPropagation();deleteTx('${t.id}')" style="background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;padding:4px;margin-right:4px;" title="מחק">🗑️</button>
     </div>`;
   }).join('');
 }
@@ -709,18 +784,31 @@ function toggleRec(id) {
   showToast(t.recurring?'⭐ סומנה כהוצאה קבועה':'הוצאה הוסרה מהקבועות');
 }
 
+function getMonthKey() { return `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`; }
+function getMonthBudget() { return budgetsByMonth[getMonthKey()] ?? monthlyBudget; }
+
 function openBudgetModal() {
-  document.getElementById('budgetModalInput').value=monthlyBudget||'';
+  document.getElementById('budgetModalInput').value = getMonthBudget() || '';
+  document.getElementById('budgetModalTitle').textContent = `תקציב ${MONTHS_HE[currentMonth]} ${currentYear}`;
   document.getElementById('budgetModal').classList.add('open');
 }
 function closeBudgetModal() { document.getElementById('budgetModal').classList.remove('open'); }
 function saveBudgetModal() {
-  const v=parseFloat(document.getElementById('budgetModalInput').value);
-  if(v>0){monthlyBudget=v;saveAll();renderBudget();closeBudgetModal();showToast('תקציב הוגדר: ₪'+fmt(v));}
+  const v = parseFloat(document.getElementById('budgetModalInput').value);
+  if (v>0) {
+    budgetsByMonth[getMonthKey()] = v;
+    monthlyBudget = v;
+    saveAll(); renderBudget(); closeBudgetModal();
+    showToast(`תקציב ${MONTHS_HE[currentMonth]}: ₪${fmt(v)}`);
+  }
 }
 function saveBudget() {
-  const v=parseFloat(document.getElementById('budgetInput').value);
-  if(v>0){monthlyBudget=v;saveAll();renderBudget();showToast('תקציב הוגדר: ₪'+fmt(v));}
+  const v = parseFloat(document.getElementById('budgetInput').value);
+  if (v>0) {
+    budgetsByMonth[getMonthKey()] = v;
+    monthlyBudget = v;
+    saveAll(); renderBudget(); showToast(`תקציב ${MONTHS_HE[currentMonth]}: ₪${fmt(v)}`);
+  }
 }
 
 function showPage(name,el) {
@@ -791,6 +879,61 @@ function loadDemo() {
   monthlyBudget=8000;
   saveAll();render();renderCompare();showToast('נתוני דוגמה נטענו — 3 חודשים ✓');
 }
+let _catModalTxId = null;
+let _catModalSelected = null;
+
+function openCatModal(id) {
+  const tx = transactions.find(t => String(t.id) === String(id));
+  if (!tx) return;
+  _catModalTxId = id;
+  _catModalSelected = tx.category || 'אחר';
+  document.getElementById('catModalName').textContent = tx.name;
+  const sameCount = transactions.filter(t => t.name === tx.name).length;
+  document.getElementById('catModalSub').textContent = sameCount > 1 ? `מופיעה ${sameCount} פעמים` : `₪${fmt(tx.amount)} • ${tx.date}`;
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = Object.entries(CATEGORIES).map(([name, d]) => `
+    <button class="cat-btn ${name === _catModalSelected ? 'selected' : ''}" onclick="selectCat(this, '${name.replace(/'/g,"\\'")}')">
+      <span class="cat-emoji">${d.emoji}</span>
+      <span class="cat-name">${name}</span>
+    </button>
+  `).join('');
+  document.getElementById('catModal').classList.add('open');
+}
+
+function selectCat(btn, name) {
+  _catModalSelected = name;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function closeCatModal() {
+  document.getElementById('catModal').classList.remove('open');
+  _catModalTxId = null;
+  _catModalSelected = null;
+}
+
+function applyCat(applyAll) {
+  if (!_catModalTxId || !_catModalSelected) return;
+  const tx = transactions.find(t => String(t.id) === String(_catModalTxId));
+  if (!tx) return;
+  if (applyAll) {
+    // שמור בזיכרון לעסקאות עתידיות
+    merchantCategories[tx.name] = _catModalSelected;
+    transactions.filter(t => t.name === tx.name).forEach(t => t.category = _catModalSelected);
+    showToast(`עודכנו כל עסקאות "${tx.name}" ✓`);
+  } else {
+    tx.category = _catModalSelected;
+    showToast('קטגוריה עודכנה לעסקה זו בלבד ✓');
+  }
+  saveAll(); render(); renderCompare(); closeCatModal();
+}
+
+function deleteTx(id) {
+  if (!confirm('למחוק עסקה זו?')) return;
+  transactions = transactions.filter(t => String(t.id) !== String(id));
+  saveAll(); render(); renderCompare(); showToast('העסקה נמחקה ✓');
+}
+
 function clearAll(){transactions=[];monthlyBudget=0;saveAll();render();showToast('הנתונים נמחקו');}
 
 window.parseSMS=function(text){
@@ -798,7 +941,7 @@ window.parseSMS=function(text){
   const im=text.match(/אושרה עסקה ב[־\-](\d{2}\/\d{2}) בסך ([\d.]+)\s*(ILS|USD|EUR)?\s*ב[־\-](.+?)(?:\.|$|\n)/);
   if(im){const[,ds,amount,,name]=im;const[day,month]=ds.split('/');tx.date=`${currentYear}-${month}-${day}`;tx.amount=parseFloat(amount);tx.name=name.trim().replace(/\s*-\s*UNITED STATES.*$/i,'').trim();tx.card='isracard';tx.foreign=text.includes('UNITED STATES')||text.includes('USD');}
   const cm=text.match(/בתאריך (\d{2}\/\d{2}).*?ב[־\-](.+?)\s+בסך ([\d.]+)\s*ש/);
-  if(cm){const[,ds,name,amount]=cm;const[day,month]=ds.split('/');tx.date=`${currentYear}-${month}-${day}`;tx.amount=parseFloat(amount);tx.name=name.trim();tx.card='cal';tx.foreign=text.includes('חו"ל');}
+  if(cm){const[,ds,name,amount]=cm;const[day,month]=ds.split('/');tx.date=`${currentYear}-${month}-${day}`;tx.amount=parseFloat(amount);tx.name=name.trim();tx.card='cal';tx.foreign=text.includes('חול');}
   if(tx.name){tx.category=getCategory(tx.name);transactions.push(tx);saveAll();render();return tx;}
   return null;
 };
@@ -840,25 +983,50 @@ function getTxsForMonth(m, y) {
 }
 
 function renderCompare() {
-  const months = getCmpMonths();
+  const months = getCmpMonths().reverse(); // חדש מימין, ישן משמאל
   const monthNames = months.map(({m,y}) => MONTHS_HE[m].slice(0,3) + (y!==currentYear?`'${String(y).slice(2)}`:''));
 
   // Build data per month
   const monthData = months.map(({m,y}) => getTxsForMonth(m,y));
   const totals = monthData.map(txs => txs.reduce((s,t)=>s+t.amount,0));
 
-  // Summary pills
-  const avgTotal = totals.filter(t=>t>0).reduce((s,t)=>s+t,0) / (totals.filter(t=>t>0).length||1);
-  const maxTotal = Math.max(...totals);
-  const maxMonthIdx = totals.indexOf(maxTotal);
-  const trend = totals[totals.length-1] - totals[totals.length-2];
-
-  const summaryEl = document.getElementById('cmpSummary');
-  summaryEl.innerHTML = [
-    `<div class="cmp-pill"><div class="cmp-pill-label">ממוצע חודשי</div><div class="cmp-pill-val">₪${fmt(avgTotal)}</div><div class="cmp-pill-sub">לחודש</div></div>`,
-    `<div class="cmp-pill"><div class="cmp-pill-label">חודש שיא</div><div class="cmp-pill-val" style="font-size:14px">${MONTHS_HE[months[maxMonthIdx].m]}</div><div class="cmp-pill-sub">₪${fmt(maxTotal)}</div></div>`,
-    totals.length>=2 ? `<div class="cmp-pill"><div class="cmp-pill-label">מגמה</div><div class="cmp-pill-val" style="color:${trend>0?'var(--accent2)':'var(--accent3)'};font-size:16px">${trend>0?'▲':'▼'} ₪${fmt(Math.abs(trend))}</div><div class="cmp-pill-sub">לעומת חודש קודם</div></div>` : '',
-  ].join('');
+  // Line chart
+  const canvas = document.getElementById('cmpLineChart');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.parentElement.clientWidth - 28;
+    canvas.width = W; canvas.height = 120;
+    ctx.clearRect(0,0,W,120);
+    const maxT = Math.max(...totals, 1);
+    const pad = {l:50, r:10, t:10, b:30};
+    const cw = W - pad.l - pad.r;
+    const ch = 120 - pad.t - pad.b;
+    // grid lines
+    [0,0.25,0.5,0.75,1].forEach(pct => {
+      const y = pad.t + ch*(1-pct);
+      ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+cw,y); ctx.stroke();
+      if(pct>0){ ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='9px Heebo'; ctx.textAlign='right';
+        ctx.fillText('₪'+fmt(maxT*pct), pad.l-4, y+3); }
+    });
+    // line
+    const pts = totals.map((t,i)=>({ x: pad.l + (i/(totals.length-1||1))*cw, y: pad.t + ch*(1-t/maxT) }));
+    ctx.strokeStyle='#6c63ff'; ctx.lineWidth=2; ctx.lineJoin='round';
+    ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke();
+    // fill
+    ctx.fillStyle='rgba(108,99,255,0.1)';
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pad.t+ch);
+    pts.forEach(p=>ctx.lineTo(p.x,p.y));
+    ctx.lineTo(pts[pts.length-1].x, pad.t+ch); ctx.closePath(); ctx.fill();
+    // dots + labels
+    pts.forEach((p,i)=>{
+      ctx.fillStyle='#6c63ff'; ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.font='bold 10px Heebo'; ctx.textAlign='center';
+      ctx.fillText('₪'+fmt(totals[i]), p.x, p.y-10);
+      ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='9px Heebo';
+      ctx.fillText(monthNames[i], p.x, pad.t+ch+18);
+    });
+  }
 
   const cols = 1 + months.length;
   const gridCols = `1.8fr ${months.map(()=>'1fr').join(' ')}`;
@@ -894,7 +1062,7 @@ function renderCompare() {
     const catList = [...allCats].sort((a,b) => {
       const totA = monthData.reduce((s,txs)=>s+txs.filter(t=>(t.category||'אחר')===a).reduce((ss,t)=>ss+t.amount,0),0);
       const totB = monthData.reduce((s,txs)=>s+txs.filter(t=>(t.category||'אחר')===b).reduce((ss,t)=>ss+t.amount,0),0);
-      return totB - totA;
+      return totB - totA; // יורד מהגבוה לנמוך
     });
 
     catList.forEach((cat, ci) => {
@@ -920,7 +1088,14 @@ function renderCompare() {
         return `<div class="cmp-cell ${cls}">${amt>0?'₪'+fmt(amt):'—'}</div>`;
       }).join('');
 
-      // Merchant drill rows
+      // Merchant summary drill rows
+      const merchantsInCat = new Set();
+      monthData.forEach(txs => txs.filter(t=>(t.category||'אחר')===cat).forEach(t=>merchantsInCat.add(t.name)));
+      const merchantList = [...merchantsInCat].sort((a,b)=>{
+        const totA=monthData.reduce((s,txs)=>s+txs.filter(t=>t.name===a).reduce((ss,t)=>ss+t.amount,0),0);
+        const totB=monthData.reduce((s,txs)=>s+txs.filter(t=>t.name===b).reduce((ss,t)=>ss+t.amount,0),0);
+        return totB-totA;
+      });
       const drillRows = merchantList.map(name => {
         const mAmounts = monthData.map(txs => txs.filter(t=>t.name===name).reduce((s,t)=>s+t.amount,0));
         const mCells = mAmounts.map(a=>`<div class="cmp-merch-cell ${a>0?'has-val':''}">${a>0?'₪'+fmt(a):'—'}</div>`).join('');
