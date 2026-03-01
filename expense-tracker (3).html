@@ -449,16 +449,14 @@ function getCategory(name) {
   return 'אחר';
 }
 
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycby2Ky7F1lvJkYj01AzQGzCpPPV_vgihGE-nz895jHl4xmy0MKF5pTRIE0_HG8jrqlXZ/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwuBHfEq9OEYcckCrJ2ltHUH_AZ0kPiqQDkIz7U8v4DP6LRxOKq5MP3HM5ssogKnOr9/exec';
 
-function syncFromSheets() {
-  const callbackName = 'sheetsCB_' + Date.now();
-  const script = document.createElement('script');
-  script.src = SHEETS_URL + '?callback=' + callbackName;
-  script.onerror = () => { showToast('שגיאת סנכרון — בדקי חיבור'); document.body.removeChild(script); };
-  window[callbackName] = function(rows) {
-    delete window[callbackName];
-    document.body.removeChild(script);
+async function syncFromSheets() {
+  try {
+    const res = await fetch(SHEETS_URL, {redirect: 'follow'});
+    const text = await res.text();
+    let rows;
+    try { rows = JSON.parse(text); } catch(e) { throw new Error('parse error'); }
     if (!Array.isArray(rows) || rows.length===0) { showToast('הכל מעודכן ✓'); return; }
     const existing = new Set(transactions.map(t=>t.date+'|'+t.name+'|'+t.amount));
     let added = 0;
@@ -480,8 +478,7 @@ function syncFromSheets() {
     });
     if (added>0) { saveAll(); render(); renderCompare(); showToast(`סונכרנו ${added} עסקאות חדשות ✓`); }
     else showToast('הכל מעודכן ✓');
-  };
-  document.body.appendChild(script);
+  } catch(e) { showToast('שגיאת סנכרון — בדקי חיבור'); }
 }
 
 async function pushToSheets(tx) {
