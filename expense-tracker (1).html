@@ -449,14 +449,14 @@ function getCategory(name) {
   return 'אחר';
 }
 
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxjKo_kBijd9EPrSzmiN7_uxrD7R3tDjRZG0KlCCyj3rvI4AevfDLTw1IQorFwXy0CM/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycby2Ky7F1lvJkYj01AzQGzCpPPV_vgihGE-nz895jHl4xmy0MKF5pTRIE0_HG8jrqlXZ/exec';
 
 async function syncFromSheets() {
   try {
-    const res = await fetch(SHEETS_URL, { mode: 'cors' });
+    const proxyUrl = 'https://thingproxy.freeboard.io/fetch/' + SHEETS_URL;
+    const res = await fetch(proxyUrl);
     const rows = await res.json();
     if (!Array.isArray(rows) || rows.length===0) { showToast('הכל מעודכן ✓'); return; }
-    // merge — avoid duplicates by date+name+amount
     const existing = new Set(transactions.map(t=>t.date+'|'+t.name+'|'+t.amount));
     let added = 0;
     rows.forEach(r => {
