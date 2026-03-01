@@ -228,6 +228,8 @@
   <div class="logo">כסף<span>חכם</span></div>
   <div style="display:flex;align-items:center;gap:8px">
     <button onclick="syncFromSheets()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="סנכרן מ-Google Sheets">🔄</button>
+    <button onclick="document.getElementById('csvInput').click()" style="background:var(--surface2);border:1px solid var(--border);color:var(--warn);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="ייבוא CSV מ-Sheets">📥</button>
+    <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="importCSV(this)">
     <div class="month-nav">
       <button onclick="changeMonth(-1)">›</button>
       <div class="month-label" id="monthLabel"></div>
@@ -449,15 +451,57 @@ function getCategory(name) {
   return 'אחר';
 }
 
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzwusfaRWY5n_bnZKJzB0xK2b8YC2vp9oJQysU3GT6Nkf7V35kcywzKzkkT2Hv-cQM3eg/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwuBHfEq9OEYcckCrJ2ltHUH_AZ0kPiqQDkIz7U8v4DP6LRxOKq5MP3HM5ssogKnOr9/exec';
+
+function importCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { showToast('קובץ ריק'); return; }
+    // detect separator
+    const sep = lines[0].includes('\t') ? '\t' : ',';
+    const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g,''));
+    const existing = new Set(transactions.map(t => t.date+'|'+t.name+'|'+t.amount));
+    let added = 0;
+    lines.slice(1).forEach(line => {
+      const cols = line.split(sep).map(c => c.trim().replace(/"/g,''));
+      const row = {};
+      headers.forEach((h,i) => row[h] = cols[i] || '');
+      // try to find date, name, amount columns
+      const date = row['תאריך'] || row['date'] || row['Date'] || '';
+      const name = row['שם בית עסק'] || row['name'] || row['שם'] || row['בית עסק'] || '';
+      const amount = parseFloat((row['סכום'] || row['amount'] || row['Amount'] || '0').replace(/[,₪]/g,''));
+      const card = row['כרטיס'] || row['card'] || 'cal';
+      if (!date || !name || !amount) return;
+      const key = date+'|'+name+'|'+amount;
+      if (existing.has(key)) return;
+      existing.add(key);
+      transactions.push({
+        id: Date.now()+Math.random(),
+        date, name, amount,
+        card: card.toLowerCase(),
+        foreign: (row['חול']||'') === 'כן',
+        recurring: false,
+        category: row['קטגוריה'] || getCategory(name)
+      });
+      added++;
+    });
+    input.value = '';
+    if (added > 0) { saveAll(); render(); renderCompare(); showToast(`יובאו ${added} עסקאות ✓`); }
+    else showToast('אין עסקאות חדשות לייבוא');
+  };
+  reader.readAsText(file, 'UTF-8');
+}
 
 async function syncFromSheets() {
-
   try {
-    const res = await fetch(SHEETS_URL);
-    const rows = await res.json();
-    if (!Array.isArray(rows) || rows.length===0) return;
-    // merge — avoid duplicates by date+name+amount
+    const res = await fetch(SHEETS_URL, {redirect: 'follow'});
+    const text = await res.text();
+    let rows;
+    try { rows = JSON.parse(text); } catch(e) { throw new Error('parse error'); }
+    if (!Array.isArray(rows) || rows.length===0) { showToast('הכל מעודכן ✓'); return; }
     const existing = new Set(transactions.map(t=>t.date+'|'+t.name+'|'+t.amount));
     let added = 0;
     rows.forEach(r => {
