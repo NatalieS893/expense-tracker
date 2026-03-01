@@ -454,11 +454,17 @@ const SHEETS_URL = 'https://script.google.com/macros/s/AKfycby2Ky7F1lvJkYj01AzQG
 function syncFromSheets() {
   const callbackName = 'sheetsCB_' + Date.now();
   const script = document.createElement('script');
-  script.src = SHEETS_URL + '?callback=' + callbackName;
-  script.onerror = () => { showToast('שגיאת סנכרון — בדקי חיבור'); document.body.removeChild(script); };
+  script.src = SHEETS_URL + '?callback=' + callbackName + '&t=' + Date.now();
+  let done = false;
+  const cleanup = () => { 
+    done = true;
+    delete window[callbackName]; 
+    if (document.body.contains(script)) document.body.removeChild(script); 
+  };
+  script.onerror = () => { cleanup(); showToast('שגיאת סנכרון — בדקי חיבור'); };
+  setTimeout(() => { if (!done) { cleanup(); showToast('שגיאת סנכרון — בדקי חיבור'); } }, 10000);
   window[callbackName] = function(rows) {
-    delete window[callbackName];
-    document.body.removeChild(script);
+    cleanup();
     if (!Array.isArray(rows) || rows.length===0) { showToast('הכל מעודכן ✓'); return; }
     const existing = new Set(transactions.map(t=>t.date+'|'+t.name+'|'+t.amount));
     let added = 0;
