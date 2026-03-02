@@ -957,8 +957,9 @@ function openCatModal(id) {
   document.getElementById('catModalSub').textContent = sameCount > 1 ? `מופיעה ${sameCount} פעמים` : `₪${fmt(tx.amount)} • ${tx.date}`;
   const grid = document.getElementById('catGrid');
   grid.innerHTML = Object.entries(CATEGORIES).map(([name, d]) => `
-    <button class="cat-btn ${name === _catModalSelected ? 'selected' : ''}" onclick="selectCat(this, '${name.replace(/'/g,"\\'")}')">
-      <span class="cat-emoji">${d.emoji}</span>
+    <button class="cat-btn ${name === _catModalSelected ? 'selected' : ''}" 
+      onclick="selectCat(this, '${name.replace(/'/g,"\\'")}')">
+      <span class="cat-emoji" onclick="event.stopPropagation();editCatEmoji('${name.replace(/'/g,"\\'")}',this)">${d.emoji}</span>
       <span class="cat-name">${name}</span>
     </button>
   `).join('');
@@ -969,6 +970,15 @@ function selectCat(btn, name) {
   _catModalSelected = name;
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
+}
+
+function editCatEmoji(catName, el) {
+  const newEmoji = prompt('שני אימוג\'י לקטגוריה "' + catName + '":', CATEGORIES[catName]?.emoji || '📁');
+  if (newEmoji && newEmoji.trim()) {
+    CATEGORIES[catName].emoji = newEmoji.trim();
+    el.textContent = newEmoji.trim();
+    showToast('אימוג\'י עודכן ✓');
+  }
 }
 
 function showAddCategoryForm() {
