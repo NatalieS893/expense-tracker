@@ -531,34 +531,57 @@ function importCSV(input) {
   reader.readAsText(file, 'UTF-8');
 }
 
+function syncFromSheetsJSONP() {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'sheetsCallback_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      reject(new Error('timeout'));
+    }, 10000);
+
+    window[callbackName] = function(data) {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+
+    script.src = SHEETS_URL + '?callback=' + callbackName;
+    script.onerror = () => { clearTimeout(timeout); reject(new Error('script error')); };
+    document.body.appendChild(script);
+  });
+}
+
 async function syncFromSheets() {
+  showToast('מסנכרן...');
   try {
-    const res = await fetch(SHEETS_URL, {redirect: 'follow'});
-    const text = await res.text();
-    let rows;
-    try { rows = JSON.parse(text); } catch(e) { throw new Error('parse error'); }
-    if (!Array.isArray(rows) || rows.length===0) { showToast('הכל מעודכן ✓'); return; }
-    const existing = new Set(transactions.map(t=>t.date+'|'+t.name+'|'+t.amount));
+    const rows = await syncFromSheetsJSONP();
+    if (!Array.isArray(rows) || rows.length === 0) { showToast('הכל מעודכן ✓'); return; }
+    const existing = new Set(transactions.map(t => t.date+'|'+t.name+'|'+t.amount));
     let added = 0;
     rows.forEach(r => {
-      const key = r['תאריך']+'|'+r['שם בית עסק']+'|'+r['סכום'];
-      if (!existing.has(key) && r['תאריך'] && r['שם בית עסק']) {
+      const date = r['תאריך'] ? String(r['תאריך']).trim() : '';
+      const name = r['שם בית עסק'] ? String(r['שם בית עסק']).trim() : '';
+      const amount = parseFloat(r['סכום']) || 0;
+      const key = date+'|'+name+'|'+amount;
+      if (!existing.has(key) && date && name) {
         transactions.push({
-          id: Date.now()+Math.random(),
-          date: r['תאריך'],
-          name: r['שם בית עסק'],
-          amount: parseFloat(r['סכום'])||0,
-          card: r['כרטיס']||'isracard',
-          foreign: r['חול']==='כן',
+          id: Date.now() + Math.random(),
+          date, name, amount,
+          card: (r['כרטיס'] || 'isracard').toLowerCase(),
+          foreign: r['חול'] === 'כן',
           recurring: false,
-          category: r['קטגוריה']||getCategory(r['שם בית עסק'])
+          category: r['קטגוריה'] || getCategory(name)
         });
+        existing.add(key);
         added++;
       }
     });
-    if (added>0) { saveAll(); render(); renderCompare(); showToast(`סונכרנו ${added} עסקאות חדשות ✓`); }
+    if (added > 0) { saveAll(); render(); renderCompare(); showToast(`סונכרנו ${added} עסקאות חדשות ✓`); }
     else showToast('הכל מעודכן ✓');
-  } catch(e) { showToast('שגיאת סנכרון — בדקי חיבור'); }
+  } catch(e) { showToast('שגיאת סנכרון — נסי שוב'); }
 }
 
 async function pushToSheets(tx) {
