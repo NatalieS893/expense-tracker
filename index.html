@@ -233,6 +233,16 @@
     </div>
     <div class="cat-modal-sub" id="catModalSub"></div>
     <div class="cat-grid" id="catGrid"></div>
+    <div style="margin-bottom:12px">
+      <button onclick="showAddCategoryForm()" id="addCatBtn" style="width:100%;background:var(--surface2);border:1px dashed var(--border);border-radius:10px;padding:10px;color:var(--text-dim);font-family:'Heebo',sans-serif;font-size:13px;cursor:pointer">+ הוסף קטגוריה חדשה</button>
+      <div id="addCatForm" style="display:none;margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="newCatEmoji" type="text" placeholder="😀" maxlength="2" style="width:50px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-size:18px;text-align:center;font-family:'Heebo',sans-serif">
+          <input id="newCatName" type="text" placeholder="שם קטגוריה" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:'Heebo',sans-serif;font-size:13px">
+        </div>
+        <button onclick="addNewCategory()" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;cursor:pointer">הוסף</button>
+      </div>
+    </div>
     <div class="cat-modal-actions">
       <button class="cat-apply-one" onclick="applyCat(false)">החל על עסקה זו</button>
       <button class="cat-apply-all" onclick="applyCat(true)">החל על כולן ✓</button>
@@ -588,6 +598,8 @@ async function pushToSheets(tx) {
   try {
     await fetch(SHEETS_URL, {
       method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'text/plain'},
       body: JSON.stringify({
         date: tx.date, name: tx.name, amount: tx.amount,
         card: tx.card, foreign: tx.foreign, category: tx.category, source: 'app'
@@ -957,6 +969,44 @@ function selectCat(btn, name) {
   _catModalSelected = name;
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
+}
+
+function showAddCategoryForm() {
+  const form = document.getElementById('addCatForm');
+  const btn = document.getElementById('addCatBtn');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  btn.style.display = form.style.display === 'block' ? 'none' : 'block';
+}
+
+function addNewCategory() {
+  const emoji = document.getElementById('newCatEmoji').value.trim() || '📁';
+  const name = document.getElementById('newCatName').value.trim();
+  if (!name) { showToast('נא להזין שם קטגוריה'); return; }
+  if (CATEGORIES[name]) { showToast('קטגוריה זו כבר קיימת'); return; }
+  // הוסף לפני "אחר"
+  const colors = ['#6c63ff','#ff6584','#ffa94d','#43d9a0','#da77f2','#ff8787','#74c0fc','#ffd43b','#51cf66','#339af0','#f06595','#94d82d','#20c997'];
+  const color = colors[Object.keys(CATEGORIES).length % colors.length];
+  const newCats = {};
+  Object.entries(CATEGORIES).forEach(([k,v]) => {
+    if (k !== 'אחר') newCats[k] = v;
+  });
+  newCats[name] = { emoji, color, keywords: [] };
+  newCats['אחר'] = CATEGORIES['אחר'];
+  Object.assign(CATEGORIES, newCats);
+  // רענן את הגריד
+  document.getElementById('addCatForm').style.display = 'none';
+  document.getElementById('addCatBtn').style.display = 'block';
+  document.getElementById('newCatName').value = '';
+  document.getElementById('newCatEmoji').value = '';
+  // עדכן גריד
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = Object.entries(CATEGORIES).map(([n, d]) => `
+    <button class="cat-btn ${n === _catModalSelected ? 'selected' : ''}" onclick="selectCat(this, '${n.replace(/'/g,"\\'")}')">
+      <span class="cat-emoji">${d.emoji}</span>
+      <span class="cat-name">${n}</span>
+    </button>
+  `).join('');
+  showToast(`קטגוריה "${name}" נוספה ✓`);
 }
 
 function closeCatModal() {
