@@ -889,8 +889,10 @@ function addManual() {
   const card=document.getElementById('manualCard').value;
   const recurring=document.getElementById('manualRecToggle').classList.contains('on');
   if(!name||!amount||!date){showToast('נא למלא את כל השדות');return;}
-  transactions.push({id:Date.now(),name,amount,date,card,foreign:false,recurring,category:getCategory(name)});
+  const tx = {id:Date.now(),name,amount,date,card,foreign:false,recurring,category:getCategory(name)};
+  transactions.push(tx);
   saveAll();render();
+  pushToSheets(tx); // שלח ל-Sheets לסנכרון
   document.getElementById('manualName').value='';
   document.getElementById('manualAmount').value='';
   document.getElementById('manualRecToggle').classList.remove('on');
