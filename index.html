@@ -366,6 +366,13 @@
   </div>
 </div>
 
+<!-- CATEGORIES MOBILE -->
+<div id="page-categories-mobile" class="page">
+  <div class="main">
+    <div id="categoryListMobile"></div>
+  </div>
+</div>
+
 <!-- ADD/SETTINGS -->
 <div id="page-import" class="page">
   <div class="main">
@@ -438,8 +445,8 @@
 <div class="bottom-nav">
   <div class="nav-item active" onclick="showPage('home',this)"><div class="icon">📊</div><div>סיכום</div></div>
   <div class="nav-item" onclick="showPage('transactions',this)"><div class="icon">📋</div><div>עסקאות</div></div>
+  <div class="nav-item" onclick="showPage('categories-mobile',this);renderCategoriesMobile()"><div class="icon">📂</div><div>קטגוריות</div></div>
   <div class="nav-item" onclick="showPage('compare',this)"><div class="icon">📈</div><div>השוואה</div></div>
-  <div class="nav-item" onclick="showPage('merchants',this)"><div class="icon">🏪</div><div>בתי עסק</div></div>
   <div class="nav-item" onclick="showPage('import',this)"><div class="icon">➕</div><div>הוספה</div></div>
 </div>
 
@@ -477,11 +484,14 @@ const CATEGORIES = {
   'חשמל ותקשורת':   { emoji:'💡', color:'#ffd43b', keywords:['חשמל','מים','גז יגל','ועד','ארנונה','internet','bezeq','hot','012','cellcom','partner','פרטנר','פלאפון','לזוז','בזק','סלקום','012','HOT'] },
   'ספורט וכושר':    { emoji:'🏋️', color:'#ff8c00', keywords:['מכון כושר','ספורט','fitness','gym','כושר','שחייה','טניס','כדורגל','כדורסל'] },
   'חוגים':           { emoji:'🎨', color:'#cc5de8', keywords:['חוג','סטודיו','מרכז קהילתי','רשת מרכזים','נבון','בית ספר'] },
+  'שירותי בנקאות':  { emoji:'🏦', color:'#4dabf7', keywords:['בנק','bank','עמלה','דמי כרטיס','פועלים','לאומי','דיסקונט','מזרחי','הפועלים'] },
+  'בית וגן':         { emoji:'🌿', color:'#69db7c', keywords:['גן','משתלה','אינטרנט','ריהוט','ikea','home center','הום סנטר','כלבו','רהיטים'] },
   'העברות':          { emoji:'💸', color:'#94d82d', keywords:['bit','ביט','העברה','paybox','PAYBOX','העברה ב','BIT'] },
   'ביטוח ופיננסים': { emoji:'💰', color:'#51cf66', keywords:['ביטוח','מנורה','הפניקס','כלל','מגדל','הראל','ישיר','בטוח','AIG','חיים','בריאות'] },
   'חינוך':           { emoji:'📚', color:'#339af0', keywords:['בית ספר','אוניברסיטה','מכללה','תיאוריה','קורס','חינוך','נבון','אנקורי'] },
   'מיסים ותשלומים': { emoji:'🏛️', color:'#f06595', keywords:['עירייה','ארנונה','מס','עיריית','מוסדות'] },
   'חול':            { emoji:'✈️', color:'#20c997', keywords:['USA','LUX','Mountain View','EUR','USD'] },
+  'מתנות':           { emoji:'🎁', color:'#f783ac', keywords:['מתנה','מתנות','gift','צעצוע','צעצועים','פרחים'] },
   'אחר':             { emoji:'📦', color:'#868e96', keywords:[] }
 };
 
@@ -564,11 +574,14 @@ function syncFromSheetsJSONP() {
   });
 }
 
-async function syncFromSheets() {
-  showToast('מסנכרן...');
+let _syncing = false;
+async function syncFromSheets(silent) {
+  if (_syncing) return;
+  _syncing = true;
+  if (!silent) showToast('מסנכרן...');
   try {
     const rows = await syncFromSheetsJSONP();
-    if (!Array.isArray(rows) || rows.length === 0) { showToast('הכל מעודכן ✓'); return; }
+    if (!Array.isArray(rows) || rows.length === 0) { if(!silent) showToast('הכל מעודכן ✓'); _syncing=false; return; }
     const existing = new Set(transactions.map(t => t.date+'|'+t.name+'|'+t.amount));
     let added = 0;
     rows.forEach(r => {
@@ -590,8 +603,9 @@ async function syncFromSheets() {
       }
     });
     if (added > 0) { saveAll(); render(); renderCompare(); showToast(`סונכרנו ${added} עסקאות חדשות ✓`); }
-    else showToast('הכל מעודכן ✓');
-  } catch(e) { showToast('שגיאת סנכרון — נסי שוב'); }
+    else if (!silent) showToast('הכל מעודכן ✓');
+  } catch(e) { if(!silent) showToast('שגיאת סנכרון — נסי שוב'); }
+  _syncing = false;
 }
 
 async function pushToSheets(tx) {
@@ -747,6 +761,48 @@ function renderCategories() {
   }).join('');
 }
 
+function renderCategoriesMobile() {
+  const txs = getMonthTxs();
+  const cats = {};
+  txs.forEach(t => {
+    const cat = t.category || 'אחר';
+    if (!cats[cat]) cats[cat] = { total:0, items:[] };
+    cats[cat].total += t.amount;
+    cats[cat].items.push(t);
+  });
+  const sorted = Object.entries(cats).sort((a,b) => b[1].total - a[1].total);
+  const maxAmt = sorted[0]?.[1].total || 1;
+  const el = document.getElementById('categoryListMobile');
+  if (!el) return;
+  if (!sorted.length) { el.innerHTML='<div class="empty-state"><div class="icon">📂</div><p>אין נתונים לחודש זה</p></div>'; return; }
+  el.innerHTML = sorted.map(([name, data]) => {
+    const info = CATEGORIES[name] || CATEGORIES['אחר'];
+    const pct = (data.total / maxAmt * 100).toFixed(0);
+    const items = [...data.items].sort((a,b) => new Date(b.date) - new Date(a.date));
+    const rows = items.map(t => {
+      const d = new Date(t.date);
+      const ds = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+      return `<div class="cat-tx-item">
+        <span class="rec-btn ${t.recurring?'on':''}" onclick="event.stopPropagation();toggleRec('${t.id}')">${t.recurring?'⭐':'☆'}</span>
+        <div class="cat-tx-name">${t.name}</div>
+        <div class="cat-tx-date">${ds}</div>
+        <div class="cat-tx-amount">₪${fmt(t.amount)}</div>
+      </div>`;
+    }).join('');
+    const cid = 'mcat-' + name.replace(/\s/g,'_');
+    return `<div class="category-item" id="${cid}">
+      <div class="cat-header" onclick="document.getElementById('${cid}').classList.toggle('open')">
+        <div class="cat-row">
+          <div class="cat-name"><span class="cat-emoji">${info.emoji}</span>${name}</div>
+          <div class="cat-right"><div style="text-align:left"><div class="cat-amount">₪${fmt(data.total)}</div><div class="cat-count">${data.items.length} עסקאות</div></div><span class="cat-chevron">▼</span></div>
+        </div>
+        <div class="cat-bar-bg"><div class="cat-bar" style="width:${pct}%;background:${info.color}"></div></div>
+      </div>
+      <div class="cat-detail">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
 let yearView = false;
 
 function toggleYearView(btn) {
@@ -880,6 +936,8 @@ function showPage(name,el) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   el.classList.add('active');
   if (name==='compare') renderCompare();
+  if (name==='transactions') renderTransactions();
+  if (name==='home') render();
 }
 function changeMonth(dir) {
   currentMonth+=dir;
@@ -951,21 +1009,31 @@ function openCatModal(id) {
   const tx = transactions.find(t => String(t.id) === String(id));
   if (!tx) return;
   _catModalTxId = id;
-  _catModalSelected = tx.category || 'אחר';
+  _catModalSelected = tx.category || "אחר";
   document.getElementById('catModalName').textContent = tx.name;
   const sameCount = transactions.filter(t => t.name === tx.name).length;
-  document.getElementById('catModalSub').textContent = sameCount > 1 ? `מופיעה ${sameCount} פעמים` : `₪${fmt(tx.amount)} • ${tx.date}`;
+  const subText = sameCount > 1 ? ("מופיעה " + sameCount + " פעמים") : ("₪" + fmt(tx.amount) + " • " + tx.date);
+  document.getElementById('catModalSub').textContent = subText;
   const grid = document.getElementById('catGrid');
-  grid.innerHTML = Object.entries(CATEGORIES).map(([name, d]) => `
-    <button class="cat-btn ${name === _catModalSelected ? 'selected' : ''}" 
-      onclick="selectCat(this, '${name.replace(/'/g,"\\'")}')">
-      <span class="cat-emoji" onclick="event.stopPropagation();editCatEmoji('${name.replace(/'/g,"\\'")}',this)">${d.emoji}</span>
-      <span class="cat-name">${name}</span>
-    </button>
-  `).join('');
+  grid.innerHTML = Object.entries(CATEGORIES).map(([name, d]) => {
+    const sel = name === _catModalSelected ? 'selected' : '';
+    const safeName = name.replace(/"/g, '&quot;');
+    return '<button class="cat-btn ' + sel + '" data-cat="' + safeName + '"><span class="cat-emoji">' + d.emoji + '</span><span class="cat-name">' + name + '</span></button>';
+  }).join('');
+  grid.querySelectorAll('.cat-btn').forEach(btn => {
+    let pressTimer, moved = false;
+    btn.addEventListener('click', () => {
+      const catName = btn.getAttribute('data-cat');
+      grid.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      _catModalSelected = catName;
+    });
+    btn.addEventListener('touchstart', () => { moved = false; pressTimer = setTimeout(() => { if (!moved) editCatEmoji(btn.getAttribute('data-cat'), btn.querySelector('.cat-emoji')); }, 700); }, {passive:true});
+    btn.addEventListener('touchmove', () => { moved = true; clearTimeout(pressTimer); }, {passive:true});
+    btn.addEventListener('touchend', (e) => { clearTimeout(pressTimer); if (!moved) { e.preventDefault(); const catName = btn.getAttribute('data-cat'); grid.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); _catModalSelected = catName; } });
+  });
   document.getElementById('catModal').classList.add('open');
 }
-
 function selectCat(btn, name) {
   _catModalSelected = name;
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
@@ -1293,7 +1361,7 @@ function toggleCmpDrill(id) {
 }
 
 document.getElementById('manualDate').valueAsDate=new Date();
-loadAll().then(()=>{ render(); renderCompare(); setTimeout(syncFromSheets, 500); });
+loadAll().then(()=>{ render(); renderCompare(); setTimeout(()=>syncFromSheets(true), 500); });
 </script>
 </body>
 </html>
