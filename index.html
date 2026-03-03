@@ -175,7 +175,8 @@
   .view-btn.active { background:var(--surface); border-color:var(--accent); color:var(--accent); font-weight:700; }
 
   /* MONTH HEADERS */
-  .compare-table { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+  .compare-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .compare-table { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:14px; min-width:420px; }
   .compare-thead { display:grid; border-bottom:1px solid var(--border); background:var(--surface2); padding:10px 14px; }
   .compare-thead .th { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; font-weight:700; text-align:center; }
   .compare-thead .th:first-child { text-align:right; }
@@ -438,7 +439,7 @@
       <div style="font-size:11px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">סה"כ הוצאות חודשיות</div>
       <canvas id="cmpLineChart" height="120"></canvas>
     </div>
-    <div id="compareTable"></div>
+    <div class="compare-table-wrap"><div id="compareTable"></div></div>
   </div>
 </div>
 
