@@ -851,7 +851,12 @@ function renderTransactions() {
   else if(activeFilter==='cal') txs=txs.filter(t=>t.card==='cal');
   else if(activeFilter==='foreign') txs=txs.filter(t=>t.foreign);
   else if(activeFilter==='recurring') txs=txs.filter(t=>t.recurring);
-  txs.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const isLaterInst = t => { const m = t.name.match(/\((\d+)\/\d+\)$/); return m && parseInt(m[1]) > 1; };
+  txs.sort((a,b) => {
+    const aLater = isLaterInst(a), bLater = isLaterInst(b);
+    if (aLater !== bLater) return aLater ? 1 : -1;
+    return new Date(b.date) - new Date(a.date);
+  });
 
   // Summary bar
   const total = txs.reduce((s,t)=>s+t.amount,0);
