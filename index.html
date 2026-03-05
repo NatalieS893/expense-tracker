@@ -104,6 +104,8 @@
 
   .tx-list { display:flex; flex-direction:column; gap:7px; }
   .tx-item { background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:12px 14px; display:flex; align-items:center; gap:10px; }
+  .tx-note-col { flex-shrink:0; min-width:52px; max-width:100px; text-align:center; cursor:pointer; }
+  .tx-note-col:hover { opacity:0.7; }
   .tx-icon { width:38px; height:38px; border-radius:9px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
   .tx-info { flex:1; min-width:0; }
   .tx-name { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -389,6 +391,8 @@
           <option value="cal">ויזה כאל (...4145)</option>
         </select>
       </div>
+
+      <div class="field"><label class="lbl">הערה (אופציונלי)</label><input id="manualNote" type="text" placeholder="למשל: מזדה 3, יונדאי..." class="inp"></div>
 
       <!-- תשלומים -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -876,6 +880,9 @@ function renderTransactions() {
         <div class="tx-name">${t.name}</div>
         <div class="tx-meta">${badge}${t.foreign?'<span style="color:var(--accent3)">חו"ל</span>':''}${t.recurring?'<span style="background:rgba(255,169,77,.15);color:var(--warn);font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700">קבועה</span>':''}<span style="color:${catColor};font-size:9px;margin-right:4px">${catLabel}</span></div>
       </div>
+      <div class="tx-note-col" onclick="event.stopPropagation();editNote('${t.id}',this)" title="לחץ להוספת הערה">
+        ${t.note ? `<span style="font-size:11px;color:var(--accent3);background:rgba(108,99,255,0.12);padding:2px 7px;border-radius:6px;white-space:nowrap">${t.note}</span>` : `<span style="font-size:11px;color:var(--text-dim);opacity:0.4">+ הערה</span>`}
+      </div>
       <div class="tx-right"><div class="tx-amount${t.foreign?' foreign':''}">₪${fmt(t.amount)}</div><div class="tx-date">${ds}</div></div>
       <button onclick="event.stopPropagation();deleteTx('${t.id}')" style="background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;padding:4px;margin-right:4px;" title="מחק">🗑️</button>
     </div>`;
@@ -917,6 +924,44 @@ function toggleMerch(id) {
   const wasOpen=wrap.classList.contains('open');
   document.querySelectorAll('.merchant-wrap').forEach(w=>w.classList.remove('open'));
   if(!wasOpen) wrap.classList.add('open');
+}
+
+function editNote(id, el) {
+  const tx = transactions.find(t => String(t.id) === String(id));
+  if (!tx) return;
+  const newNote = prompt('הערה לעסקה:', tx.note || '');
+  if (newNote === null) return; // ביטול
+  const note = newNote.trim();
+
+  // בדוק אם זו עסקה בתשלומים — אם כן, עדכן את כולם
+  const isInst = tx.name.match(/\((\d+)\/(\d+)\)$/);
+  if (isInst) {
+    const baseName = tx.name.replace(/\s*\(\d+\/\d+\)$/, '');
+    const total = parseInt(isInst[2]);
+    let updated = 0;
+    transactions.forEach(t => {
+      if (t.name.startsWith(baseName) && t.name.match(/\(\d+\/\d+\)$/)) {
+        t.note = note;
+        updated++;
+      }
+    });
+    saveAll(); renderTransactions();
+    showToast(note ? `הערה עודכנה ל-${updated} תשלומים ✓` : 'הערה נמחקה ✓');
+  } else if (tx.recurring) {
+    // הוצאה קבועה — שאל אם לעדכן את כולם
+    const applyAll = confirm('זוהי הוצאה קבועה — לעדכן את ההערה לכל העסקאות של "' + tx.name + '"?');
+    if (applyAll) {
+      transactions.filter(t => t.name === tx.name).forEach(t => t.note = note);
+    } else {
+      tx.note = note;
+    }
+    saveAll(); renderTransactions();
+    showToast(note ? 'הערה עודכנה ✓' : 'הערה נמחקה ✓');
+  } else {
+    tx.note = note;
+    saveAll(); renderTransactions();
+    showToast(note ? 'הערה עודכנה ✓' : 'הערה נמחקה ✓');
+  }
 }
 
 function toggleRec(id) {
@@ -1011,6 +1056,7 @@ function addManual() {
   const date = document.getElementById('manualDate').value;
   const card = document.getElementById('manualCard').value;
   const recurring = document.getElementById('manualRecToggle').classList.contains('on');
+  const note = document.getElementById('manualNote').value.trim();
   const isInst = document.getElementById('manualInstToggle').classList.contains('on');
   const instCount = isInst ? (parseInt(document.getElementById('manualInstCount').value) || 1) : 1;
   if (!name || !totalAmount || !date) { showToast('נא למלא את כל השדות'); return; }
@@ -1024,7 +1070,7 @@ function addManual() {
     d.setMonth(d.getMonth() + i);
     const txDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     const txName = instCount > 1 ? `${name} (${i+1}/${instCount})` : name;
-    txsToAdd.push({ id: Date.now()+i, name: txName, amount: perPayment, date: txDate, card, foreign: false, recurring, category: getCategory(name) });
+    txsToAdd.push({ id: Date.now()+i, name: txName, amount: perPayment, date: txDate, card, foreign: false, recurring, note, category: getCategory(name) });
   }
 
   txsToAdd.forEach(tx => { transactions.push(tx); pushToSheets(tx); });
@@ -1033,6 +1079,7 @@ function addManual() {
   // reset form
   document.getElementById('manualName').value = '';
   document.getElementById('manualAmount').value = '';
+  document.getElementById('manualNote').value = '';
   document.getElementById('manualRecToggle').classList.remove('on');
   document.getElementById('manualInstToggle').classList.remove('on');
   document.getElementById('instFields').style.display = 'none';
