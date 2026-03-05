@@ -381,7 +381,7 @@
     <div class="section-title">הוספת עסקה</div>
     <div class="card-form">
       <div class="field"><label class="lbl">בית עסק</label><input id="manualName" type="text" placeholder="שם" class="inp"></div>
-      <div class="field"><label class="lbl">סכום כולל (₪)</label><input id="manualAmount" type="number" placeholder="0.00" class="inp"></div>
+      <div class="field"><label class="lbl">סכום כולל (₪)</label><input id="manualAmount" type="number" placeholder="0.00" class="inp" oninput="updateInstPreview()"></div>
       <div class="field"><label class="lbl">תאריך עסקה ראשון</label><input id="manualDate" type="date" class="inp"></div>
       <div class="field"><label class="lbl">כרטיס</label>
         <select id="manualCard" class="inp">
@@ -392,12 +392,12 @@
 
       <!-- תשלומים -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div class="toggle" id="manualInstToggle" onclick="this.classList.toggle('on');document.getElementById('instFields').style.display=this.classList.contains('on')?'block':'none'"></div>
+        <div class="toggle" id="manualInstToggle" onclick="toggleInstFields()"></div>
         <span style="font-size:13px;color:var(--text-dim)">עסקה בתשלומים 💳</span>
       </div>
       <div id="instFields" style="display:none;background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:12px">
-        <div class="field"><label class="lbl">מספר תשלומים</label><input id="manualInstCount" type="number" min="2" max="60" placeholder="למשל: 12" class="inp"></div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:-8px;margin-bottom:8px" id="instPreview"></div>
+        <div class="field"><label class="lbl">מספר תשלומים</label><input id="manualInstCount" type="number" min="2" max="60" placeholder="למשל: 12" class="inp" oninput="updateInstPreview()"></div>
+        <div id="instPreview" style="font-size:13px;font-weight:700;color:var(--accent3);margin-top:4px;margin-bottom:4px;text-align:center"></div>
       </div>
 
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -976,47 +976,70 @@ function setFilter(f,el) {
   renderTransactions();
 }
 
-function addManual() {
-  const name=document.getElementById('manualName').value.trim();
-  const totalAmount=parseFloat(document.getElementById('manualAmount').value);
-  const date=document.getElementById('manualDate').value;
-  const card=document.getElementById('manualCard').value;
-  const recurring=document.getElementById('manualRecToggle').classList.contains('on');
-  const isInst=document.getElementById('manualInstToggle').classList.contains('on');
-  const instCount=isInst ? parseInt(document.getElementById('manualInstCount').value)||1 : 1;
-  if(!name||!totalAmount||!date){showToast('נא למלא את כל השדות');return;}
+function toggleInstFields() {
+  const toggle = document.getElementById('manualInstToggle');
+  toggle.classList.toggle('on');
+  const isOn = toggle.classList.contains('on');
+  document.getElementById('instFields').style.display = isOn ? 'block' : 'none';
+  if (!isOn) {
+    document.getElementById('instPreview').textContent = '';
+    document.getElementById('manualInstCount').value = '';
+  }
+}
 
-  const perPayment = Math.round((totalAmount/instCount)*100)/100;
+function updateInstPreview() {
+  const amt = parseFloat(document.getElementById('manualAmount').value);
+  const cnt = parseInt(document.getElementById('manualInstCount').value);
+  const date = document.getElementById('manualDate').value;
+  const el = document.getElementById('instPreview');
+  if (amt && cnt >= 2 && date) {
+    const per = Math.round((amt/cnt)*100)/100;
+    const d = new Date(date);
+    const endD = new Date(date);
+    endD.setMonth(endD.getMonth()+cnt-1);
+    const startStr = String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+    const endStr = String(endD.getMonth()+1).padStart(2,'0')+'/'+endD.getFullYear();
+    el.textContent = `חיוב חודשי: ₪${fmt(per)} × ${cnt} (${startStr} — ${endStr})`;
+  } else {
+    el.textContent = '';
+  }
+}
+
+function addManual() {
+  const name = document.getElementById('manualName').value.trim();
+  const totalAmount = parseFloat(document.getElementById('manualAmount').value);
+  const date = document.getElementById('manualDate').value;
+  const card = document.getElementById('manualCard').value;
+  const recurring = document.getElementById('manualRecToggle').classList.contains('on');
+  const isInst = document.getElementById('manualInstToggle').classList.contains('on');
+  const instCount = isInst ? (parseInt(document.getElementById('manualInstCount').value) || 1) : 1;
+  if (!name || !totalAmount || !date) { showToast('נא למלא את כל השדות'); return; }
+  if (isInst && instCount < 2) { showToast('נא להזין מספר תשלומים (מינימום 2)'); return; }
+
+  const perPayment = Math.round((totalAmount / instCount) * 100) / 100;
   const txsToAdd = [];
 
-  for (let i=0; i<instCount; i++) {
-    const d = new Date(date);
-    d.setMonth(d.getMonth()+i);
-    const txDate = d.toISOString().split('T')[0];
-    const txName = instCount>1 ? `${name} (${i+1}/${instCount})` : name;
-    txsToAdd.push({
-      id: Date.now()+i,
-      name: txName,
-      amount: perPayment,
-      date: txDate,
-      card, foreign:false, recurring,
-      category: getCategory(name)
-    });
+  for (let i = 0; i < instCount; i++) {
+    const d = new Date(date + 'T12:00:00');
+    d.setMonth(d.getMonth() + i);
+    const txDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const txName = instCount > 1 ? `${name} (${i+1}/${instCount})` : name;
+    txsToAdd.push({ id: Date.now()+i, name: txName, amount: perPayment, date: txDate, card, foreign: false, recurring, category: getCategory(name) });
   }
 
   txsToAdd.forEach(tx => { transactions.push(tx); pushToSheets(tx); });
   saveAll(); render();
 
   // reset form
-  document.getElementById('manualName').value='';
-  document.getElementById('manualAmount').value='';
+  document.getElementById('manualName').value = '';
+  document.getElementById('manualAmount').value = '';
   document.getElementById('manualRecToggle').classList.remove('on');
   document.getElementById('manualInstToggle').classList.remove('on');
-  document.getElementById('instFields').style.display='none';
-  document.getElementById('manualInstCount').value='';
-  document.getElementById('instPreview').textContent='';
+  document.getElementById('instFields').style.display = 'none';
+  document.getElementById('manualInstCount').value = '';
+  document.getElementById('instPreview').textContent = '';
 
-  showToast(instCount>1 ? `נוספו ${instCount} תשלומים של ₪${fmt(perPayment)} ✓` : 'העסקה נוספה ✓');
+  showToast(instCount > 1 ? `נוספו ${instCount} תשלומים של ₪${fmt(perPayment)} ✓` : 'העסקה נוספה ✓');
 }
 
 function loadDemo() {
@@ -1411,26 +1434,6 @@ function toggleCmpDrill(id) {
 }
 
 document.getElementById('manualDate').valueAsDate=new Date();
-
-// live installment preview
-['manualAmount','manualInstCount','manualDate'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => {
-    const amt = parseFloat(document.getElementById('manualAmount').value);
-    const cnt = parseInt(document.getElementById('manualInstCount').value);
-    const date = document.getElementById('manualDate').value;
-    if (amt && cnt >= 2 && date) {
-      const per = Math.round((amt/cnt)*100)/100;
-      const d = new Date(date);
-      const endD = new Date(date); endD.setMonth(endD.getMonth()+cnt-1);
-      const startStr = String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
-      const endStr = String(endD.getMonth()+1).padStart(2,'0')+'/'+endD.getFullYear();
-      document.getElementById('instPreview').textContent =
-        `₪${fmt(per)} לתשלום × ${cnt} חודשים (${startStr} — ${endStr})`;
-    } else {
-      document.getElementById('instPreview').textContent = '';
-    }
-  });
-});
 loadAll().then(()=>{ render(); renderCompare(); setTimeout(()=>syncFromSheets(true), 500); });
 </script>
 </body>
