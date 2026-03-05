@@ -1397,15 +1397,17 @@ function renderCompare() {
         return `<div class="cmp-cell ${cls}">${amt>0?'₪'+fmt(amt):'—'}</div>`;
       }).join('');
 
-      const drillRows = merchantList.map(name => {
-        const mAmounts = monthData.map(txs => txs.filter(t=>t.name===name).reduce((s,t)=>s+t.amount,0));
+      // Group drill-down by base name
+      const toBase2 = n => n.replace(/\s*\(\d+\/\d+\)$/, '').trim();
+      const baseDrillList = [...new Set(merchantList.map(toBase2))];
+      const drillRows = baseDrillList.map(baseName => {
+        const mAmounts = monthData.map(txs => txs.filter(t=>toBase2(t.name)===baseName && (t.category||'אחר')===cat).reduce((s,t)=>s+t.amount,0));
         const mCells = mAmounts.map(a=>`<div class="cmp-merch-cell ${a>0?'has-val':''}">${a>0?'₪'+fmt(a):'—'}</div>`).join('');
-        const dispName = name.replace(/\s*\(\d+\/\d+\)$/, '');
         let note2 = '';
-        monthData.forEach(txs => txs.filter(t=>t.name===name).forEach(t=>{ if(t.note) note2=t.note; }));
+        monthData.forEach(txs => txs.filter(t=>toBase2(t.name)===baseName).forEach(t=>{ if(t.note) note2=t.note; }));
         const noteSpan = note2 ? ` <span style="font-size:9px;color:var(--accent3);background:rgba(108,99,255,0.12);padding:1px 4px;border-radius:3px">${note2}</span>` : '';
         return `<div class="cmp-merch-row" style="grid-template-columns:${gridCols}">
-          <div class="cmp-merch-name">• ${dispName}${noteSpan}</div>${mCells}
+          <div class="cmp-merch-name">• ${baseName}${noteSpan}</div>${mCells}
         </div>`;
       }).join('');
 
@@ -1419,31 +1421,33 @@ function renderCompare() {
     });
 
   } else if (cmpView === 'merchant') {
-    const allMerch = new Set();
-    monthData.forEach(txs => txs.forEach(t => allMerch.add(t.name)));
-    const merchList = [...allMerch].sort((a,b) => {
-      const tA=monthData.reduce((s,txs)=>s+txs.filter(t=>t.name===a).reduce((ss,t)=>ss+t.amount,0),0);
-      const tB=monthData.reduce((s,txs)=>s+txs.filter(t=>t.name===b).reduce((ss,t)=>ss+t.amount,0),0);
+    // Group by base name (strip installment suffix)
+    const allMerchRaw = new Set();
+    monthData.forEach(txs => txs.forEach(t => allMerchRaw.add(t.name)));
+    const toBase = name => name.replace(/\s*\(\d+\/\d+\)$/, '').trim();
+    const allBase = new Set([...allMerchRaw].map(toBase));
+
+    const merchList = [...allBase].sort((a,b) => {
+      const tA=monthData.reduce((s,txs)=>s+txs.filter(t=>toBase(t.name)===a).reduce((ss,t)=>ss+t.amount,0),0);
+      const tB=monthData.reduce((s,txs)=>s+txs.filter(t=>toBase(t.name)===b).reduce((ss,t)=>ss+t.amount,0),0);
       return tB-tA;
     });
 
-    html += merchList.map(name => {
-      const info = CATEGORIES[getCategory(name)] || CATEGORIES['אחר'];
-      const mAmounts = monthData.map(txs => txs.filter(t=>t.name===name).reduce((s,t)=>s+t.amount,0));
+    html += merchList.map(baseName => {
+      const info = CATEGORIES[getCategory(baseName)] || CATEGORIES['אחר'];
+      const mAmounts = monthData.map(txs => txs.filter(t=>toBase(t.name)===baseName).reduce((s,t)=>s+t.amount,0));
       const last = mAmounts[mAmounts.length-1], prev = mAmounts[mAmounts.length-2]||0;
       const cells = mAmounts.map((amt,i) => {
         let cls = amt===0?'zero':'';
         if (i===mAmounts.length-1 && prev>0) cls = amt>prev*1.1?'up':amt<prev*0.9?'down':'';
         return `<div class="cmp-cell ${cls}">${amt>0?'₪'+fmt(amt):'—'}</div>`;
       }).join('');
-      // strip installment suffix for display, show note
-      const dispName = name.replace(/\s*\(\d+\/\d+\)$/, '');
       let note = '';
-      monthData.forEach(txs => txs.filter(t=>t.name===name).forEach(t=>{ if(t.note) note=t.note; }));
+      monthData.forEach(txs => txs.filter(t=>toBase(t.name)===baseName).forEach(t=>{ if(t.note) note=t.note; }));
       const noteHtml = note ? `<span style="font-size:10px;color:var(--accent3);background:rgba(108,99,255,0.12);padding:1px 5px;border-radius:4px;margin-right:4px">${note}</span>` : '';
       return `<div class="cmp-cat-wrap">
         <div class="cmp-cat-row" style="grid-template-columns:${gridCols}">
-          <div class="cmp-cat-name"><span class="cmp-cat-emoji">${info.emoji}</span>${dispName}${noteHtml}</div>${cells}
+          <div class="cmp-cat-name"><span class="cmp-cat-emoji">${info.emoji}</span>${baseName}${noteHtml}</div>${cells}
         </div>
       </div>`;
     }).join('');
