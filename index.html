@@ -387,8 +387,10 @@
       <div class="field"><label class="lbl">תאריך עסקה ראשון</label><input id="manualDate" type="date" class="inp"></div>
       <div class="field"><label class="lbl">כרטיס</label>
         <select id="manualCard" class="inp">
+          <option value="cal" selected>ויזה כאל (...4145)</option>
           <option value="isracard">ישראכרט (...7787)</option>
-          <option value="cal">ויזה כאל (...4145)</option>
+          <option value="card6244">כרטיס (...6244)</option>
+          <option value="card8046">כרטיס (...8046)</option>
         </select>
       </div>
 
@@ -867,7 +869,7 @@ function renderTransactions() {
   if(!txs.length){el.innerHTML='<div class="empty-state"><div class="icon">🔍</div><p>לא נמצאו עסקאות</p></div>';return;}
   el.innerHTML=txs.map(t=>{
     const info=CATEGORIES[t.category||'אחר']||CATEGORIES['אחר'];
-    const badge=t.card==='isracard'?'<span class="tx-card-badge badge-isracard">ישראכרט</span>':t.card==='diners'?'<span class="tx-card-badge badge-cal" style="background:rgba(255,101,132,0.15);color:#ff6584">דיינרס</span>':'<span class="tx-card-badge badge-cal">כאל</span>';
+    const badge=t.card==='isracard'?'<span class="tx-card-badge badge-isracard">ישראכרט</span>':t.card==='diners'?'<span class="tx-card-badge badge-cal" style="background:rgba(255,101,132,0.15);color:#ff6584">דיינרס</span>':t.card==='card6244'?'<span class="tx-card-badge" style="background:rgba(0,200,150,0.15);color:#00c896">6244</span>':t.card==='card8046'?'<span class="tx-card-badge" style="background:rgba(255,200,0,0.15);color:#ffc800">8046</span>':'<span class="tx-card-badge badge-cal">כאל</span>';
     const d=new Date(t.date);
     const ds=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
     const cat = t.category || 'אחר';
