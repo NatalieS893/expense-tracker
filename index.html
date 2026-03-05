@@ -1397,14 +1397,16 @@ function renderCompare() {
         return `<div class="cmp-cell ${cls}">${amt>0?'₪'+fmt(amt):'—'}</div>`;
       }).join('');
 
-      // Group drill-down by base name
+      // Group drill-down by base name + note
       const toBase2 = n => n.replace(/\s*\(\d+\/\d+\)$/, '').trim();
-      const baseDrillList = [...new Set(merchantList.map(toBase2))];
-      const drillRows = baseDrillList.map(baseName => {
-        const mAmounts = monthData.map(txs => txs.filter(t=>toBase2(t.name)===baseName && (t.category||'אחר')===cat).reduce((s,t)=>s+t.amount,0));
+      const drillKeys = new Set();
+      merchantList.forEach(name => {
+        monthData.forEach(txs => txs.filter(t=>t.name===name).forEach(t => drillKeys.add(toBase2(t.name)+'|||'+(t.note||''))));
+      });
+      const drillRows = [...drillKeys].map(key => {
+        const [baseName, note2] = key.split('|||');
+        const mAmounts = monthData.map(txs => txs.filter(t=>toBase2(t.name)===baseName&&(t.note||'')===note2&&(t.category||'אחר')===cat).reduce((s,t)=>s+t.amount,0));
         const mCells = mAmounts.map(a=>`<div class="cmp-merch-cell ${a>0?'has-val':''}">${a>0?'₪'+fmt(a):'—'}</div>`).join('');
-        let note2 = '';
-        monthData.forEach(txs => txs.filter(t=>toBase2(t.name)===baseName).forEach(t=>{ if(t.note) note2=t.note; }));
         const noteSpan = note2 ? ` <span style="font-size:9px;color:var(--accent3);background:rgba(108,99,255,0.12);padding:1px 4px;border-radius:3px">${note2}</span>` : '';
         return `<div class="cmp-merch-row" style="grid-template-columns:${gridCols}">
           <div class="cmp-merch-name">• ${baseName}${noteSpan}</div>${mCells}
@@ -1421,29 +1423,29 @@ function renderCompare() {
     });
 
   } else if (cmpView === 'merchant') {
-    // Group by base name (strip installment suffix)
-    const allMerchRaw = new Set();
-    monthData.forEach(txs => txs.forEach(t => allMerchRaw.add(t.name)));
+    // Group by base name + note (so same merchant with different notes = separate rows)
     const toBase = name => name.replace(/\s*\(\d+\/\d+\)$/, '').trim();
-    const allBase = new Set([...allMerchRaw].map(toBase));
+    const allMerchKeys = new Set();
+    monthData.forEach(txs => txs.forEach(t => allMerchKeys.add(toBase(t.name) + '|||' + (t.note||''))));
 
-    const merchList = [...allBase].sort((a,b) => {
-      const tA=monthData.reduce((s,txs)=>s+txs.filter(t=>toBase(t.name)===a).reduce((ss,t)=>ss+t.amount,0),0);
-      const tB=monthData.reduce((s,txs)=>s+txs.filter(t=>toBase(t.name)===b).reduce((ss,t)=>ss+t.amount,0),0);
+    const merchList = [...allMerchKeys].sort((a,b) => {
+      const [nameA, noteA] = a.split('|||');
+      const [nameB, noteB] = b.split('|||');
+      const tA = monthData.reduce((s,txs)=>s+txs.filter(t=>toBase(t.name)===nameA&&(t.note||'')=== noteA).reduce((ss,t)=>ss+t.amount,0),0);
+      const tB = monthData.reduce((s,txs)=>s+txs.filter(t=>toBase(t.name)===nameB&&(t.note||'')=== noteB).reduce((ss,t)=>ss+t.amount,0),0);
       return tB-tA;
     });
 
-    html += merchList.map(baseName => {
+    html += merchList.map(key => {
+      const [baseName, note] = key.split('|||');
       const info = CATEGORIES[getCategory(baseName)] || CATEGORIES['אחר'];
-      const mAmounts = monthData.map(txs => txs.filter(t=>toBase(t.name)===baseName).reduce((s,t)=>s+t.amount,0));
+      const mAmounts = monthData.map(txs => txs.filter(t=>toBase(t.name)===baseName&&(t.note||'')===note).reduce((s,t)=>s+t.amount,0));
       const last = mAmounts[mAmounts.length-1], prev = mAmounts[mAmounts.length-2]||0;
       const cells = mAmounts.map((amt,i) => {
         let cls = amt===0?'zero':'';
         if (i===mAmounts.length-1 && prev>0) cls = amt>prev*1.1?'up':amt<prev*0.9?'down':'';
         return `<div class="cmp-cell ${cls}">${amt>0?'₪'+fmt(amt):'—'}</div>`;
       }).join('');
-      let note = '';
-      monthData.forEach(txs => txs.filter(t=>toBase(t.name)===baseName).forEach(t=>{ if(t.note) note=t.note; }));
       const noteHtml = note ? `<span style="font-size:10px;color:var(--accent3);background:rgba(108,99,255,0.12);padding:1px 5px;border-radius:4px;margin-right:4px">${note}</span>` : '';
       return `<div class="cmp-cat-wrap">
         <div class="cmp-cat-row" style="grid-template-columns:${gridCols}">
