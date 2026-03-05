@@ -930,17 +930,18 @@ function editNote(id, el) {
   const tx = transactions.find(t => String(t.id) === String(id));
   if (!tx) return;
   const newNote = prompt('הערה לעסקה:', tx.note || '');
-  if (newNote === null) return; // ביטול
+  if (newNote === null) return;
   const note = newNote.trim();
 
-  // בדוק אם זו עסקה בתשלומים — אם כן, עדכן את כולם
   const isInst = tx.name.match(/\((\d+)\/(\d+)\)$/);
   if (isInst) {
-    const baseName = tx.name.replace(/\s*\(\d+\/\d+\)$/, '');
-    const total = parseInt(isInst[2]);
+    // עדכן רק תשלומים מאותה סדרה — שם בסיסי + סכום זהה + מספר תשלומים זהה
+    const baseName = tx.name.replace(/\s*\(\d+\/\d+\)$/, '').trim();
+    const total = isInst[2];
     let updated = 0;
     transactions.forEach(t => {
-      if (t.name.startsWith(baseName) && t.name.match(/\(\d+\/\d+\)$/)) {
+      const m = t.name.match(/\((\d+)\/(\d+)\)$/);
+      if (m && m[2] === total && t.name.replace(/\s*\(\d+\/\d+\)$/, '').trim() === baseName && t.amount === tx.amount) {
         t.note = note;
         updated++;
       }
@@ -948,7 +949,6 @@ function editNote(id, el) {
     saveAll(); renderTransactions();
     showToast(note ? `הערה עודכנה ל-${updated} תשלומים ✓` : 'הערה נמחקה ✓');
   } else if (tx.recurring) {
-    // הוצאה קבועה — שאל אם לעדכן את כולם
     const applyAll = confirm('זוהי הוצאה קבועה — לעדכן את ההערה לכל העסקאות של "' + tx.name + '"?');
     if (applyAll) {
       transactions.filter(t => t.name === tx.name).forEach(t => t.note = note);
