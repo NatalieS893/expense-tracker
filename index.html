@@ -21,12 +21,12 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Heebo',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
 
-  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 16px; position:sticky; top:0; z-index:100; display:flex; align-items:center; justify-content:space-between; width:100%; box-sizing:border-box; overflow:hidden; }
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:10px 10px; position:sticky; top:0; z-index:100; display:flex; align-items:center; justify-content:space-between; width:100%; box-sizing:border-box; overflow:hidden; }
   .logo { font-size:19px; font-weight:900; letter-spacing:-0.5px; }
   .logo span { color:var(--accent); }
-  .month-nav { display:flex; align-items:center; gap:10px; }
-  .month-nav button { background:var(--surface2); border:1px solid var(--border); color:var(--text); width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; }
-  .month-label { font-size:14px; font-weight:700; min-width:95px; text-align:center; }
+  .month-nav { display:flex; align-items:center; gap:5px; }
+  .month-nav button { background:var(--surface2); border:1px solid var(--border); color:var(--text); width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .month-label { font-size:12px; font-weight:700; min-width:78px; text-align:center; }
 
   .main { padding:14px; max-width:600px; margin:0 auto; padding-bottom:90px; }
   .page { display:none; }
@@ -279,12 +279,12 @@
 
 <div class="header">
   <div class="logo">כסף<span>חכם</span></div>
-  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-    <button onclick="syncFromSheets()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="סנכרן מ-Google Sheets">🔄</button>
-    <button onclick="exportCSV()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="ייצוא CSV">
+  <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
+    <button onclick="syncFromSheets()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="סנכרן מ-Google Sheets">🔄</button>
+    <button onclick="exportCSV()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:28px;height:28px;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="ייצוא CSV">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
     </button>
-    <button onclick="document.getElementById('csvInput').click()" style="background:var(--surface2);border:1px solid var(--border);color:var(--warn);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="ייבוא CSV">
+    <button onclick="document.getElementById('csvInput').click()" style="background:var(--surface2);border:1px solid var(--border);color:var(--warn);width:28px;height:28px;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="ייבוא CSV">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
     </button>
     <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="importCSV(this)">
@@ -433,6 +433,7 @@
 
     <div class="section-title">דמו</div>
     <button class="btn-secondary" style="border-color:var(--accent);color:var(--accent)" onclick="loadDemo()">📊 טען נתוני דוגמה</button>
+    <button class="btn-secondary" style="border-color:var(--accent2);color:var(--accent2)" onclick="removeDuplicates()">🔍 הסר כפילויות</button>
     <button class="btn-secondary" onclick="clearAll()">🗑️ נקה את כל הנתונים</button>
 
     <div style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px">
@@ -1427,6 +1428,18 @@ function deleteTx(id) {
   saveAll(); render(); renderCompare(); showToast('העסקה נמחקה ✓');
 }
 
+function removeDuplicates(){
+  const before = transactions.length;
+  const seen = new Set();
+  transactions = transactions.filter(t => {
+    const k = t.date+'|'+t.name+'|'+t.amount;
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+  const removed = before - transactions.length;
+  saveAll(); render(); renderCompare();
+  showToast(removed > 0 ? `הוסרו ${removed} כפילויות ✓` : 'אין כפילויות');
+}
 function clearAll(){transactions=[];monthlyBudget=0;saveAll();render();showToast('הנתונים נמחקו');}
 
 window.parseSMS=function(text){
