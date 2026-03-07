@@ -262,12 +262,27 @@
   </div>
 </div>
 
-<div class="header">
+<!-- DUPLICATES MODAL -->
+<div class="modal-overlay" id="dupModal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-title">🔍 נמצאו כפילויות</div>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px">
+      נמצאו <strong id="dupCount" style="color:var(--accent2)">0</strong> עסקאות כפולות במאגר.<br>
+      רוצה למחוק אותן לפני הייבוא של <strong id="dupImportCount" style="color:var(--accent3)">0</strong> עסקאות חדשות?
+    </p>
+    <div style="display:flex;gap:8px">
+      <button id="dupConfirm" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'Heebo',sans-serif;font-size:14px;font-weight:700;cursor:pointer">🗑️ כן, מחק כפילויות</button>
+      <button id="dupSkip" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:12px;font-family:'Heebo',sans-serif;font-size:14px;cursor:pointer">דלג, ייבא בלבד</button>
+    </div>
+  </div>
+</div>
+
+
   <div class="logo">כסף<span>חכם</span></div>
   <div style="display:flex;align-items:center;gap:8px">
     <button onclick="syncFromSheets()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="סנכרן מ-Google Sheets">🔄</button>
-    <button onclick="exportCSV()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="ייצוא CSV">📤</button>
-    <button onclick="document.getElementById('csvInput').click()" style="background:var(--surface2);border:1px solid var(--border);color:var(--warn);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="ייבוא CSV">📥</button>
+    <button onclick="exportCSV()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;" title="ייצוא CSV">⬆️</button>
+    <button onclick="document.getElementById('csvInput').click()" style="background:var(--surface2);border:1px solid var(--border);color:var(--warn);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;" title="ייבוא CSV">⬇️</button>
     <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="importCSV(this)">
     <div class="month-nav">
       <button onclick="changeMonth(-1)">›</button>
@@ -525,14 +540,9 @@ function exportCSV() {
   if (!transactions.length) { showToast('אין עסקאות לייצוא'); return; }
   const headers = ['תאריך','שם בית עסק','סכום','כרטיס','קטגוריה','חול','קבועה','הערה'];
   const rows = transactions.map(t => [
-    t.date,
-    t.name,
-    t.amount,
-    t.card || '',
-    t.category || '',
-    t.foreign ? 'כן' : 'לא',
-    t.recurring ? 'כן' : 'לא',
-    t.note || ''
+    t.date, t.name, t.amount, t.card || '',
+    t.category || '', t.foreign ? 'כן' : 'לא',
+    t.recurring ? 'כן' : 'לא', t.note || ''
   ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
   const csv = '\uFEFF' + [headers.join(','), ...rows].join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
@@ -552,16 +562,15 @@ function importCSV(input) {
   reader.onload = function(e) {
     const lines = e.target.result.split('\n').filter(l => l.trim());
     if (lines.length < 2) { showToast('קובץ ריק'); return; }
-    // detect separator
     const sep = lines[0].includes('\t') ? '\t' : ',';
     const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g,''));
     const existing = new Set(transactions.map(t => t.date+'|'+t.name+'|'+t.amount));
     let added = 0;
+    const toAdd = [];
     lines.slice(1).forEach(line => {
       const cols = line.split(sep).map(c => c.trim().replace(/"/g,''));
       const row = {};
       headers.forEach((h,i) => row[h] = cols[i] || '');
-      // try to find date, name, amount columns
       const date = row['תאריך'] || row['date'] || row['Date'] || '';
       const name = row['שם בית עסק'] || row['name'] || row['שם'] || row['בית עסק'] || '';
       const amount = parseFloat((row['סכום'] || row['amount'] || row['Amount'] || '0').replace(/[,₪]/g,''));
@@ -570,19 +579,55 @@ function importCSV(input) {
       const key = date+'|'+name+'|'+amount;
       if (existing.has(key)) return;
       existing.add(key);
-      transactions.push({
-        id: Date.now()+Math.random(),
-        date, name, amount,
+      toAdd.push({ id: Date.now()+Math.random(), date, name, amount,
         card: card.toLowerCase(),
         foreign: (row['חול']||'') === 'כן',
         recurring: false,
-        category: row['קטגוריה'] || getCategory(name)
+        category: row['קטגוריה'] || getCategory(name),
+        note: row['הערה'] || ''
       });
-      added++;
     });
     input.value = '';
-    if (added > 0) { saveAll(); render(); renderCompare(); showToast(`יובאו ${added} עסקאות ✓`); }
-    else showToast('אין עסקאות חדשות לייבוא');
+
+    // בדוק כפילויות קיימות לפני הייבוא
+    const dupKey = t => t.date+'|'+t.name+'|'+t.amount;
+    const allKeys = transactions.map(dupKey);
+    const seen = new Set();
+    const dupsInDb = transactions.filter(t => {
+      const k = dupKey(t);
+      if (seen.has(k)) return true;
+      seen.add(k); return false;
+    });
+
+    const doImport = () => {
+      toAdd.forEach(t => transactions.push(t));
+      if (toAdd.length > 0) { saveAll(); render(); renderCompare(); showToast(`יובאו ${toAdd.length} עסקאות ✓`); }
+      else showToast('אין עסקאות חדשות לייבוא');
+    };
+
+    if (dupsInDb.length > 0) {
+      const modal = document.getElementById('dupModal');
+      document.getElementById('dupCount').textContent = dupsInDb.length;
+      document.getElementById('dupImportCount').textContent = toAdd.length;
+      document.getElementById('dupConfirm').onclick = () => {
+        // הסר כפילויות — שמור רק את הראשונה מכל מפתח
+        const seenKeys = new Set();
+        transactions = transactions.filter(t => {
+          const k = dupKey(t);
+          if (seenKeys.has(k)) return false;
+          seenKeys.add(k); return true;
+        });
+        modal.classList.remove('open');
+        doImport();
+      };
+      document.getElementById('dupSkip').onclick = () => {
+        modal.classList.remove('open');
+        doImport();
+      };
+      modal.classList.add('open');
+    } else {
+      doImport();
+    }
   };
   reader.readAsText(file, 'UTF-8');
 }
