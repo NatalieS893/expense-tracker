@@ -315,31 +315,15 @@
           </div>
         </div>
       </div>
-      <div class="summary-card isracard">
-        <div class="card-label">ישראכרט</div>
-        <div class="card-amount"><span class="cur">₪</span><span id="isracardTotal">0</span></div>
-        <div class="card-sub" id="isracardCount">0 עסקאות</div>
-      </div>
-      <div class="summary-card cal">
-        <div class="card-label">ויזה כאל</div>
-        <div class="card-amount"><span class="cur">₪</span><span id="calTotal">0</span></div>
-        <div class="card-sub" id="calCount">0 עסקאות</div>
-      </div>
-      <div class="summary-card foreign">
-        <div class="card-label">עסקאות חו"ל</div>
-        <div class="card-amount"><span class="cur">₪</span><span id="foreignTotal">0</span></div>
-        <div class="card-sub" id="foreignCount">0 עסקאות</div>
-      </div>
-      <div class="summary-card rec">
-        <div class="card-label">הוצאות קבועות</div>
-        <div class="card-amount"><span class="cur">₪</span><span id="recurringTotal">0</span></div>
-        <div class="card-sub" id="recurringCount">0 עסקאות</div>
+      <div class="summary-card" style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:space-between">
+        <div class="card-label" style="font-size:13px">עסקאות החודש</div>
+        <div style="font-size:28px;font-weight:900;color:var(--accent3)" id="monthTxCount">0</div>
       </div>
     </div>
 
     <div class="chart-card">
-      <div class="chart-title">7 ימים אחרונים</div>
-      <div class="bar-chart" id="weekChart"></div>
+      <div class="chart-title">הוצאות אשראי — <span id="chartYearLabel"></span></div>
+      <div style="position:relative"><canvas id="yearlyChart" style="width:100%;height:160px"></canvas></div>
     </div>
 
     <div class="section-title">קטגוריות — לחץ לפירוט</div>
@@ -717,16 +701,7 @@ function renderBudget() {
 function renderSummary() {
   const txs=getMonthTxs();
   const spent=txs.reduce((s,t)=>s+t.amount,0);
-  const isr=txs.filter(t=>t.card==='isracard'), cal=txs.filter(t=>t.card==='cal');
-  const fgn=txs.filter(t=>t.foreign), rec=txs.filter(t=>t.recurring);
-  document.getElementById('isracardTotal').textContent=fmt(isr.reduce((s,t)=>s+t.amount,0));
-  document.getElementById('isracardCount').textContent=isr.length+' עסקאות';
-  document.getElementById('calTotal').textContent=fmt(cal.reduce((s,t)=>s+t.amount,0));
-  document.getElementById('calCount').textContent=cal.length+' עסקאות';
-  document.getElementById('foreignTotal').textContent=fmt(fgn.reduce((s,t)=>s+t.amount,0));
-  document.getElementById('foreignCount').textContent=fgn.length+' עסקאות';
-  document.getElementById('recurringTotal').textContent=fmt(rec.reduce((s,t)=>s+t.amount,0));
-  document.getElementById('recurringCount').textContent=rec.length+' עסקאות';
+  document.getElementById('monthTxCount').textContent = txs.length;
 
   // Budget row in summary grid
   document.getElementById('summBudgetSpent').textContent=fmt(spent);
@@ -753,13 +728,145 @@ function renderSummary() {
 }
 
 function renderChart() {
-  const el=document.getElementById('weekChart');
-  const today=new Date();
-  const days=Array.from({length:7},(_,i)=>{ const d=new Date(today); d.setDate(d.getDate()-(6-i)); return d; });
-  const amounts=days.map(d=>{ const ds=d.toISOString().split('T')[0]; return transactions.filter(t=>t.date===ds).reduce((s,t)=>s+t.amount,0); });
-  const max=Math.max(...amounts,1);
-  const dn=['א','ב','ג','ד','ה','ו','ש'];
-  el.innerHTML=days.map((d,i)=>`<div class="bar-wrap"><div class="bar" style="height:${Math.max(amounts[i]/max*100,3).toFixed(0)}%;background:#6c63ff;opacity:${0.5+i*0.07}"></div><div class="bar-label">${dn[d.getDay()]}</div></div>`).join('');
+  const canvas = document.getElementById('yearlyChart');
+  if (!canvas) return;
+  const year = currentYear;
+  document.getElementById('chartYearLabel').textContent = year;
+  const today = new Date();
+  const todayM = today.getMonth(), todayY = today.getFullYear();
+
+  // חשב סכום לכל חודש שיש נתונים
+  const monthTotals = Array.from({length:12}, (_,m) => {
+    return transactions.filter(t => {
+      const d = new Date(t.date);
+      return d.getFullYear() === year && d.getMonth() === m;
+    }).reduce((s,t) => s+t.amount, 0);
+  });
+
+  // חודשים מלאים שכבר עברו (לא החודש הנוכחי)
+  const completedMonths = Array.from({length:12}, (_,m) => {
+    if (year < todayY) return true;
+    if (year === todayY && m < todayM) return true;
+    return false;
+  });
+
+  // ממוצע רק על חודשים מלאים עם נתונים
+  const completedWithData = monthTotals.filter((v,m) => completedMonths[m] && v > 0);
+  const avg = completedWithData.length > 0 ? completedWithData.reduce((s,v)=>s+v,0) / completedWithData.length : 0;
+
+  // רשימת עמודות: חודשים + ממוצע
+  const labels = [...MONTHS_HE.map(m=>m.slice(0,3)), 'ממוצע'];
+  const values = [...monthTotals, avg];
+  const isAvg = [...Array(12).fill(false), true];
+
+  // סנן חודשים ריקים בשנים עברו (אם כבר נמצאים בשנה הנוכחית)
+  const showIdx = Array.from({length:13}, (_,i) => {
+    if (i === 12) return avg > 0; // ממוצע
+    if (year < todayY) return monthTotals[i] > 0;
+    return i <= todayM; // בשנה נוכחית — עד החודש הנוכחי
+  });
+
+  const W = canvas.parentElement.clientWidth || 300;
+  canvas.width = W; canvas.height = 160;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,160);
+
+  const visIdx = Array.from({length:13},(_,i)=>i).filter(i=>showIdx[i]);
+  if (!visIdx.length) return;
+
+  const maxVal = Math.max(...visIdx.map(i=>values[i]), 1);
+  const pad = {l:48, r:8, t:20, b:28};
+  const cw = W - pad.l - pad.r;
+  const ch = 160 - pad.t - pad.b;
+  const barW = Math.min(32, cw/visIdx.length - 4);
+
+  // grid lines
+  [0.25,0.5,0.75,1].forEach(pct => {
+    const y = pad.t + ch*(1-pct);
+    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+cw,y); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='9px Heebo'; ctx.textAlign='right';
+    ctx.fillText('₪'+fmt(maxVal*pct), pad.l-3, y+3);
+  });
+
+  visIdx.forEach((i, vi) => {
+    const x = pad.l + (vi+0.5)*(cw/visIdx.length) - barW/2;
+    const barH = Math.max((values[i]/maxVal)*ch, 2);
+    const y = pad.t + ch - barH;
+    const isCurrentM = !isAvg[i] && i === todayM && year === todayY;
+
+    // צבע עמודה
+    let color;
+    if (isAvg[i]) color = '#00c896'; // ממוצע — ירוק
+    else color = '#6c63ff'; // כל החודשים — סגול
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, y, barW, barH, [3,3,0,0]) : ctx.rect(x, y, barW, barH);
+    ctx.fill();
+
+    // סכום מעל עמודה
+    if (values[i] > 0) {
+      ctx.fillStyle = isAvg[i] ? '#00c896' : 'rgba(255,255,255,0.75)';
+      ctx.font = `${isAvg[i]?'bold ':' '}9px Heebo`; ctx.textAlign='center';
+      ctx.fillText('₪'+fmt(values[i]), x+barW/2, y-3);
+    }
+
+    // תווית חודש
+    ctx.fillStyle = isAvg[i] ? '#00c896' : (isCurrentM ? '#fff' : 'rgba(255,255,255,0.5)');
+    ctx.font = `${isCurrentM||isAvg[i]?'bold ':' '}9px Heebo`; ctx.textAlign='center';
+    ctx.fillText(labels[i], x+barW/2, pad.t+ch+16);
+  });
+
+  // קו מגמה — רק על חודשים (לא ממוצע), עם נתונים
+  const trendPts = visIdx
+    .filter(i => !isAvg[i] && values[i] > 0)
+    .map((i) => {
+      const realVi = visIdx.indexOf(i);
+      const x = pad.l + (realVi+0.5)*(cw/visIdx.length);
+      const y = pad.t + ch*(1 - values[i]/maxVal);
+      return {x, y};
+    });
+
+  if (trendPts.length >= 2) {
+    // צל מתחת לקו
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(trendPts[0].x, pad.t+ch);
+    trendPts.forEach((p,i) => {
+      if (i === 0) { ctx.lineTo(p.x, p.y); return; }
+      const prev = trendPts[i-1];
+      const cpx = (prev.x + p.x) / 2;
+      ctx.bezierCurveTo(cpx, prev.y, cpx, p.y, p.x, p.y);
+    });
+    ctx.lineTo(trendPts[trendPts.length-1].x, pad.t+ch);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.fill();
+    ctx.restore();
+
+    // קו מגמה חלק
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    trendPts.forEach((p,i) => {
+      if (i === 0) { ctx.moveTo(p.x, p.y); return; }
+      const prev = trendPts[i-1];
+      const cpx = (prev.x + p.x) / 2;
+      ctx.bezierCurveTo(cpx, prev.y, cpx, p.y, p.x, p.y);
+    });
+    ctx.stroke();
+
+    // נקודות על הקו
+    trendPts.forEach(p => {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#6c63ff';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, Math.PI*2); ctx.fill();
+    });
+  }
 }
 
 function renderCategories() {
