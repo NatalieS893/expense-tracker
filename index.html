@@ -680,7 +680,13 @@ async function syncFromSheets(silent) {
       const name = r['שם בית עסק'] ? String(r['שם בית עסק']).trim().replace(/\s+/g,' ') : '';
       const amount = parseFloat(r['סכום']) || 0;
       const key = makeKey(date, name, amount);
-      if (!existing.has(key) && date && name) {
+      // בדוק גם עם הפרש של יום אחד (הפרש UTC/ישראל)
+      const dateObj = new Date(date + 'T12:00:00');
+      const datePlus1 = new Date(dateObj); datePlus1.setDate(datePlus1.getDate()+1);
+      const dateMinus1 = new Date(dateObj); dateMinus1.setDate(dateMinus1.getDate()-1);
+      const keyPlus1 = makeKey(datePlus1.toISOString().slice(0,10), name, amount);
+      const keyMinus1 = makeKey(dateMinus1.toISOString().slice(0,10), name, amount);
+      if ((!existing.has(key) && !existing.has(keyPlus1) && !existing.has(keyMinus1)) && date && name) {
         // DEBUG - הצג את הערך הראשון שנוסף
         if (added === 0) {
           const sample = transactions.find(t => makeKey(t.date, t.name, t.amount) !== key && t.name === name);
