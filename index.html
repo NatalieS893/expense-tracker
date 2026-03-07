@@ -575,7 +575,7 @@ function importCSV(input) {
     if (lines.length < 2) { showToast('קובץ ריק'); return; }
     const sep = lines[0].includes('\t') ? '\t' : ',';
     const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g,''));
-    const existing = new Set(transactions.map(t => t.date+'|'+t.name+'|'+t.amount));
+    const existing = new Set(transactions.map(t => makeKey(t.date, t.name, t.amount)));
     const toAdd = [];
     lines.slice(1).forEach(line => {
       const cols = line.split(sep).map(c => c.trim().replace(/"/g,''));
@@ -586,7 +586,7 @@ function importCSV(input) {
       const amount = parseFloat((row['סכום'] || row['amount'] || row['Amount'] || '0').replace(/[,₪]/g,''));
       const card = row['כרטיס'] || row['card'] || 'cal';
       if (!date || !name || !amount) return;
-      const key = date+'|'+name+'|'+amount;
+      const key = makeKey(date, name, amount);
       if (existing.has(key)) return;
       existing.add(key);
       toAdd.push({ id: Date.now()+Math.random(), date, name, amount,
@@ -599,7 +599,7 @@ function importCSV(input) {
     });
     input.value = '';
 
-    const dupKey = t => t.date+'|'+t.name+'|'+t.amount;
+    const dupKey = t => makeKey(t.date, t.name, t.amount);
     const seen = new Set();
     const dupsInDb = transactions.filter(t => {
       const k = dupKey(t);
@@ -1438,7 +1438,7 @@ function removeDuplicates(){
   const before = transactions.length;
   const seen = new Set();
   transactions = transactions.filter(t => {
-    const k = t.date+'|'+t.name+'|'+t.amount;
+    const k = makeKey(t.date, t.name, t.amount);
     if (seen.has(k)) return false;
     seen.add(k); return true;
   });
