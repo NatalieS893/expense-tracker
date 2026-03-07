@@ -701,6 +701,18 @@ async function syncFromSheets(silent) {
     });
     if (added > 0) { saveAll(); render(); renderCompare(); showToast(`סונכרנו ${added} עסקאות חדשות ✓`); }
     else if (!silent) showToast('הכל מעודכן ✓');
+    // DEBUG - הצג דוגמה של עסקה שנוספת
+    if (added > 0) {
+      const first = rows.find(r => r['תאריך'] && r['שם בית עסק']);
+      if (first) {
+        const d = String(first['תאריך']).trim().substring(0,10);
+        const n = String(first['שם בית עסק']).trim().replace(/\s+/g,' ');
+        const a = parseFloat(first['סכום']) || 0;
+        setTimeout(()=>showToast(`debug: "${d}" | "${n}" | ${a}`), 2000);
+        const local = transactions.find(t => t.name === n);
+        if (local) setTimeout(()=>showToast(`local: "${local.date}" | "${local.name}" | ${local.amount}`), 4000);
+      }
+    }
   } catch(e) { if(!silent) showToast('שגיאת סנכרון — נסי שוב'); }
   _syncing = false;
 }
