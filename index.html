@@ -1726,7 +1726,7 @@ function toggleCmpDrill(id) {
 }
 
 document.getElementById('manualDate').valueAsDate=new Date();
-loadAll().then(()=>{ render(); renderCompare(); setTimeout(()=>syncFromSheets(true), 500); });
+loadAll().then(()=>{ render(); renderCompare(); });
 </script>
 </body>
 </html>
