@@ -266,7 +266,8 @@
   <div class="logo">כסף<span>חכם</span></div>
   <div style="display:flex;align-items:center;gap:8px">
     <button onclick="syncFromSheets()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="סנכרן מ-Google Sheets">🔄</button>
-    <button onclick="document.getElementById('csvInput').click()" style="background:var(--surface2);border:1px solid var(--border);color:var(--warn);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="ייבוא CSV מ-Sheets">📥</button>
+    <button onclick="exportCSV()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="ייצוא CSV">📤</button>
+    <button onclick="document.getElementById('csvInput').click()" style="background:var(--surface2);border:1px solid var(--border);color:var(--warn);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="ייבוא CSV">📥</button>
     <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="importCSV(this)">
     <div class="month-nav">
       <button onclick="changeMonth(-1)">›</button>
@@ -322,15 +323,8 @@
     </div>
 
     <div class="chart-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div class="chart-title" style="margin-bottom:0">הוצאות אשראי — <span id="chartYearLabel"></span></div>
-        <div style="display:flex;align-items:center;gap:10px;font-size:10px;color:var(--text-dim)">
-          <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(108,99,255,0.55)"></span>חודש</span>
-          <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#a89fff"></span>נוכחי</span>
-          <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#00c896"></span>ממוצע</span>
-        </div>
-      </div>
-      <div style="position:relative"><canvas id="yearlyChart" style="width:100%;height:170px"></canvas></div>
+      <div class="chart-title">הוצאות אשראי — <span id="chartYearLabel"></span></div>
+      <div style="position:relative"><canvas id="yearlyChart" style="width:100%;height:160px"></canvas></div>
     </div>
 
     <div class="section-title">קטגוריות — לחץ לפירוט</div>
@@ -526,6 +520,30 @@ function getCategory(name) {
 }
 
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwuBHfEq9OEYcckCrJ2ltHUH_AZ0kPiqQDkIz7U8v4DP6LRxOKq5MP3HM5ssogKnOr9/exec';
+
+function exportCSV() {
+  if (!transactions.length) { showToast('אין עסקאות לייצוא'); return; }
+  const headers = ['תאריך','שם בית עסק','סכום','כרטיס','קטגוריה','חול','קבועה','הערה'];
+  const rows = transactions.map(t => [
+    t.date,
+    t.name,
+    t.amount,
+    t.card || '',
+    t.category || '',
+    t.foreign ? 'כן' : 'לא',
+    t.recurring ? 'כן' : 'לא',
+    t.note || ''
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `כסף-חכם-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`יוצאו ${transactions.length} עסקאות ✓`);
+}
 
 function importCSV(input) {
   const file = input.files[0];
@@ -774,18 +792,17 @@ function renderChart() {
   });
 
   const W = canvas.parentElement.clientWidth || 300;
-  const H = 170;
-  canvas.width = W; canvas.height = H;
+  canvas.width = W; canvas.height = 160;
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0,0,W,H);
+  ctx.clearRect(0,0,W,160);
 
   const visIdx = Array.from({length:13},(_,i)=>i).filter(i=>showIdx[i]);
   if (!visIdx.length) return;
 
   const maxVal = Math.max(...visIdx.map(i=>values[i]), 1);
-  const pad = {l:50, r:8, t:22, b:30};
+  const pad = {l:48, r:8, t:20, b:28};
   const cw = W - pad.l - pad.r;
-  const ch = H - pad.t - pad.b;
+  const ch = 160 - pad.t - pad.b;
   const barW = Math.min(32, cw/visIdx.length - 4);
 
   // grid lines
@@ -805,42 +822,25 @@ function renderChart() {
 
     // צבע עמודה
     let color;
-    if (isAvg[i]) color = '#00c896';
-    else if (isCurrentM) color = '#a89fff'; // החודש הנוכחי — סגול בהיר
-    else color = 'rgba(108,99,255,0.55)'; // שאר החודשים — סגול שקוף יותר
-
-    // צל קל לעמודה
-    ctx.shadowColor = isAvg[i] ? 'rgba(0,200,150,0.3)' : isCurrentM ? 'rgba(168,159,255,0.4)' : 'transparent';
-    ctx.shadowBlur = isCurrentM ? 8 : 0;
+    if (isAvg[i]) color = '#00c896'; // ממוצע — ירוק
+    else color = '#6c63ff'; // כל החודשים — סגול
 
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x, y, barW, barH, [4,4,0,0]) : ctx.rect(x, y, barW, barH);
+    ctx.roundRect ? ctx.roundRect(x, y, barW, barH, [3,3,0,0]) : ctx.rect(x, y, barW, barH);
     ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // מסגרת לחודש הנוכחי
-    if (isCurrentM) {
-      ctx.strokeStyle = 'rgba(168,159,255,0.9)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(x, y, barW, barH, [4,4,0,0]) : ctx.rect(x, y, barW, barH);
-      ctx.stroke();
-    }
 
     // סכום מעל עמודה
     if (values[i] > 0) {
-      const labelColor = isAvg[i] ? '#00c896' : isCurrentM ? '#fff' : 'rgba(255,255,255,0.65)';
-      ctx.fillStyle = labelColor;
-      ctx.font = `${isAvg[i]||isCurrentM ? 'bold ' : ''}10px Heebo`;
-      ctx.textAlign = 'center';
-      ctx.fillText('₪'+fmt(values[i]), x+barW/2, y-5);
+      ctx.fillStyle = isAvg[i] ? '#00c896' : 'rgba(255,255,255,0.75)';
+      ctx.font = `${isAvg[i]?'bold ':' '}9px Heebo`; ctx.textAlign='center';
+      ctx.fillText('₪'+fmt(values[i]), x+barW/2, y-3);
     }
 
     // תווית חודש
-    ctx.fillStyle = isAvg[i] ? '#00c896' : (isCurrentM ? '#fff' : 'rgba(255,255,255,0.45)');
-    ctx.font = `${isCurrentM||isAvg[i]?'bold ':' '}10px Heebo`; ctx.textAlign='center';
-    ctx.fillText(labels[i], x+barW/2, pad.t+ch+17);
+    ctx.fillStyle = isAvg[i] ? '#00c896' : (isCurrentM ? '#fff' : 'rgba(255,255,255,0.5)');
+    ctx.font = `${isCurrentM||isAvg[i]?'bold ':' '}9px Heebo`; ctx.textAlign='center';
+    ctx.fillText(labels[i], x+barW/2, pad.t+ch+16);
   });
 
   // קו מגמה — רק על חודשים (לא ממוצע), עם נתונים
