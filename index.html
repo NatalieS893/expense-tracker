@@ -681,6 +681,12 @@ async function syncFromSheets(silent) {
       const amount = parseFloat(r['סכום']) || 0;
       const key = makeKey(date, name, amount);
       if (!existing.has(key) && date && name) {
+        // DEBUG - הצג את הערך הראשון שנוסף
+        if (added === 0) {
+          const sample = transactions.find(t => makeKey(t.date, t.name, t.amount) !== key && t.name === name);
+          if (sample) console.log('MISMATCH:', JSON.stringify({sheetKey: key, localKey: makeKey(sample.date, sample.name, sample.amount), sheetDate: date, localDate: sample.date, sheetName: name, localName: sample.name, sheetAmt: amount, localAmt: sample.amount}));
+          else console.log('NEW TX:', key);
+        }
         transactions.push({
           id: Date.now() + Math.random(),
           date, name, amount,
