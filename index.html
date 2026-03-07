@@ -21,7 +21,7 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Heebo',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
 
-  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 16px; position:sticky; top:0; z-index:100; display:flex; align-items:center; justify-content:space-between; }
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 16px; position:sticky; top:0; z-index:100; display:flex; align-items:center; justify-content:space-between; width:100%; box-sizing:border-box; overflow:hidden; }
   .logo { font-size:19px; font-weight:900; letter-spacing:-0.5px; }
   .logo span { color:var(--accent); }
   .month-nav { display:flex; align-items:center; gap:10px; }
@@ -277,12 +277,16 @@
   </div>
 </div>
 
-
+<div class="header">
   <div class="logo">כסף<span>חכם</span></div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <button onclick="syncFromSheets()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="סנכרן מ-Google Sheets">🔄</button>
-    <button onclick="exportCSV()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;" title="ייצוא CSV">⬆️</button>
-    <button onclick="document.getElementById('csvInput').click()" style="background:var(--surface2);border:1px solid var(--border);color:var(--warn);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;" title="ייבוא CSV">⬇️</button>
+  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+    <button onclick="syncFromSheets()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="סנכרן מ-Google Sheets">🔄</button>
+    <button onclick="exportCSV()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent3);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="ייצוא CSV">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    </button>
+    <button onclick="document.getElementById('csvInput').click()" style="background:var(--surface2);border:1px solid var(--border);color:var(--warn);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="ייבוא CSV">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+    </button>
     <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="importCSV(this)">
     <div class="month-nav">
       <button onclick="changeMonth(-1)">›</button>
@@ -565,7 +569,6 @@ function importCSV(input) {
     const sep = lines[0].includes('\t') ? '\t' : ',';
     const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g,''));
     const existing = new Set(transactions.map(t => t.date+'|'+t.name+'|'+t.amount));
-    let added = 0;
     const toAdd = [];
     lines.slice(1).forEach(line => {
       const cols = line.split(sep).map(c => c.trim().replace(/"/g,''));
@@ -589,9 +592,7 @@ function importCSV(input) {
     });
     input.value = '';
 
-    // בדוק כפילויות קיימות לפני הייבוא
     const dupKey = t => t.date+'|'+t.name+'|'+t.amount;
-    const allKeys = transactions.map(dupKey);
     const seen = new Set();
     const dupsInDb = transactions.filter(t => {
       const k = dupKey(t);
@@ -610,7 +611,6 @@ function importCSV(input) {
       document.getElementById('dupCount').textContent = dupsInDb.length;
       document.getElementById('dupImportCount').textContent = toAdd.length;
       document.getElementById('dupConfirm').onclick = () => {
-        // הסר כפילויות — שמור רק את הראשונה מכל מפתח
         const seenKeys = new Set();
         transactions = transactions.filter(t => {
           const k = dupKey(t);
