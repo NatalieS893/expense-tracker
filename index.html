@@ -680,7 +680,7 @@ async function syncFromSheets(silent) {
       const name = r['שם בית עסק'] ? String(r['שם בית עסק']).trim().replace(/\s+/g,' ') : '';
       const amount = parseFloat(r['סכום']) || 0;
       // סנכרן רק עסקאות מ-08/03/2026 קדימה
-      if (date < '2026-03-08') return;
+      if (date < '2026-03-07') return;
       const key = makeKey(date, name, amount);
       // בדוק גם עם הפרש של יום אחד (הפרש UTC/ישראל)
       const dateObj = new Date(date + 'T12:00:00');
