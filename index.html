@@ -667,7 +667,17 @@ async function syncFromSheets(silent) {
     const existingDateAmt = new Set(transactions.map(t => t.date.substring(0,10) + '|' + parseFloat(t.amount).toFixed(2)));
     let added = 0;
     rows.forEach(r => {
-      const date = r['תאריך'] ? String(r['תאריך']).trim().substring(0,10) : '';
+      let date = '';
+      if (r['תאריך']) {
+        const raw = r['תאריך'];
+        if (typeof raw === 'string' && raw.match(/^\d{4}-\d{2}-\d{2}/)) {
+          date = raw.trim().substring(0,10);
+        } else {
+          // Date object מ-Sheets — פרסר ישירות
+          const d = new Date(raw);
+          date = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        }
+      }
       const name = r['שם בית עסק'] ? String(r['שם בית עסק']).trim().replace(/\s+/g,' ') : '';
       const amount = parseFloat(r['סכום']) || 0;
       // סנכרן רק עסקאות מ-08/03/2026 קדימה
@@ -676,12 +686,13 @@ async function syncFromSheets(silent) {
       const dateAmtKey = date + '|' + amount.toFixed(2);
       // בדוק גם עם הפרש של יום אחד (הפרש UTC/ישראל)
       const dateObj = parseDate(date);
-      const datePlus1 = new Date(dateObj); datePlus1.setDate(datePlus1.getDate()+1);
-      const dateMinus1 = new Date(dateObj); dateMinus1.setDate(dateMinus1.getDate()-1);
-      const keyPlus1 = makeKey(datePlus1.toISOString().slice(0,10), name, amount);
-      const keyMinus1 = makeKey(dateMinus1.toISOString().slice(0,10), name, amount);
-      const dateAmtPlus1 = datePlus1.toISOString().slice(0,10) + '|' + amount.toFixed(2);
-      const dateAmtMinus1 = dateMinus1.toISOString().slice(0,10) + '|' + amount.toFixed(2);
+      const datePlus1 = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()+1);
+      const dateMinus1 = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()-1);
+      const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      const keyPlus1 = makeKey(fmt(datePlus1), name, amount);
+      const keyMinus1 = makeKey(fmt(dateMinus1), name, amount);
+      const dateAmtPlus1 = fmt(datePlus1) + '|' + amount.toFixed(2);
+      const dateAmtMinus1 = fmt(dateMinus1) + '|' + amount.toFixed(2);
       const alreadyExists = existing.has(key) || existing.has(keyPlus1) || existing.has(keyMinus1)
         || existingDateAmt.has(dateAmtKey) || existingDateAmt.has(dateAmtPlus1) || existingDateAmt.has(dateAmtMinus1);
       if (!alreadyExists && date && name) {
