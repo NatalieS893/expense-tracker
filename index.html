@@ -674,6 +674,8 @@ async function syncFromSheets(silent) {
     const rows = await syncFromSheetsJSONP();
     if (!Array.isArray(rows) || rows.length === 0) { if(!silent) showToast('הכל מעודכן ✓'); _syncing=false; return; }
     const existing = new Set(transactions.map(t => makeKey(t.date, t.name, t.amount)));
+    // סט נוסף לבדיקת תאריך+סכום בלבד (ללא שם) — מונע כפילויות מ-SMS+push
+    const existingDateAmt = new Set(transactions.map(t => t.date.substring(0,10) + '|' + parseFloat(t.amount).toFixed(2)));
     let added = 0;
     rows.forEach(r => {
       const date = r['תאריך'] ? String(r['תאריך']).trim().substring(0,10) : '';
@@ -682,19 +684,18 @@ async function syncFromSheets(silent) {
       // סנכרן רק עסקאות מ-08/03/2026 קדימה
       if (date < '2026-03-07') return;
       const key = makeKey(date, name, amount);
+      const dateAmtKey = date + '|' + amount.toFixed(2);
       // בדוק גם עם הפרש של יום אחד (הפרש UTC/ישראל)
       const dateObj = new Date(date + 'T12:00:00');
       const datePlus1 = new Date(dateObj); datePlus1.setDate(datePlus1.getDate()+1);
       const dateMinus1 = new Date(dateObj); dateMinus1.setDate(dateMinus1.getDate()-1);
       const keyPlus1 = makeKey(datePlus1.toISOString().slice(0,10), name, amount);
       const keyMinus1 = makeKey(dateMinus1.toISOString().slice(0,10), name, amount);
-      if ((!existing.has(key) && !existing.has(keyPlus1) && !existing.has(keyMinus1)) && date && name) {
-        // DEBUG - הצג את הערך הראשון שנוסף
-        if (added === 0) {
-          const sample = transactions.find(t => makeKey(t.date, t.name, t.amount) !== key && t.name === name);
-          if (sample) console.log('MISMATCH:', JSON.stringify({sheetKey: key, localKey: makeKey(sample.date, sample.name, sample.amount), sheetDate: date, localDate: sample.date, sheetName: name, localName: sample.name, sheetAmt: amount, localAmt: sample.amount}));
-          else console.log('NEW TX:', key);
-        }
+      const dateAmtPlus1 = datePlus1.toISOString().slice(0,10) + '|' + amount.toFixed(2);
+      const dateAmtMinus1 = dateMinus1.toISOString().slice(0,10) + '|' + amount.toFixed(2);
+      const alreadyExists = existing.has(key) || existing.has(keyPlus1) || existing.has(keyMinus1)
+        || existingDateAmt.has(dateAmtKey) || existingDateAmt.has(dateAmtPlus1) || existingDateAmt.has(dateAmtMinus1);
+      if (!alreadyExists && date && name) {
         transactions.push({
           id: Date.now() + Math.random(),
           date, name, amount,
