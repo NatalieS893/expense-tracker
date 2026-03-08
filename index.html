@@ -545,7 +545,7 @@ function getCategory(name) {
   return 'אחר';
 }
 
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyNDdSYxL2irj05ZuuKG-3OQSIn6VW_KRjp9ud3z5cbbhT30nxVu4u742m_KXRBmIXs/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx0CAp2pTOBOk-Y7M3bArWNe-z7VozQA4sgSyRGl0C955tjcdlWbvu-s5AE6wWdQMB-/exec';
 
 function exportCSV() {
   if (!transactions.length) { showToast('אין עסקאות לייצוא'); return; }
@@ -639,27 +639,10 @@ function importCSV(input) {
   reader.readAsText(file, 'UTF-8');
 }
 
-function syncFromSheetsJSONP() {
-  return new Promise((resolve, reject) => {
-    const callbackName = 'sheetsCallback_' + Date.now();
-    const script = document.createElement('script');
-    const timeout = setTimeout(() => {
-      delete window[callbackName];
-      document.body.removeChild(script);
-      reject(new Error('timeout'));
-    }, 10000);
-
-    window[callbackName] = function(data) {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      document.body.removeChild(script);
-      resolve(data);
-    };
-
-    script.src = SHEETS_URL + '?callback=' + callbackName;
-    script.onerror = () => { clearTimeout(timeout); reject(new Error('script error')); };
-    document.body.appendChild(script);
-  });
+async function syncFromSheetsJSONP() {
+  const res = await fetch(SHEETS_URL, { redirect: 'follow' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return await res.json();
 }
 
 let _syncing = false;
