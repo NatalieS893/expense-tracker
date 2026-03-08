@@ -744,7 +744,7 @@ async function loadAll() {
 
 function fmt(n) { return Math.round(n).toLocaleString('he-IL'); }
 function getMonthTxs() {
-  return transactions.filter(t=>{ const d=new Date(t.date); return d.getMonth()===currentMonth && d.getFullYear()===currentYear; });
+  return transactions.filter(t=>{ const d=new Date(t.date + 'T12:00:00'); return d.getMonth()===currentMonth && d.getFullYear()===currentYear; });
 }
 function showToast(msg) {
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
@@ -822,7 +822,7 @@ function renderChart() {
   // חשב סכום לכל חודש שיש נתונים
   const monthTotals = Array.from({length:12}, (_,m) => {
     return transactions.filter(t => {
-      const d = new Date(t.date);
+      const d = new Date(t.date + 'T12:00:00');
       return d.getFullYear() === year && d.getMonth() === m;
     }).reduce((s,t) => s+t.amount, 0);
   });
@@ -964,9 +964,9 @@ function renderCategories() {
   el.innerHTML=sorted.map(([name,data])=>{
     const info=CATEGORIES[name]||CATEGORIES['אחר'];
     const pct=(data.total/maxAmt*100).toFixed(0);
-    const items=[...data.items].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const items=[...data.items].sort((a,b)=>new Date(b.date + 'T12:00:00')-new Date(a.date + 'T12:00:00'));
     const rows=items.map(t=>{
-      const d=new Date(t.date);
+      const d=new Date(t.date + 'T12:00:00');
       const ds=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
       return `<div class="cat-tx-item">
         <span class="rec-btn ${t.recurring?'on':''}" onclick="event.stopPropagation();toggleRec('${t.id}')">${t.recurring?'⭐':'☆'}</span>
@@ -1007,9 +1007,9 @@ function renderCategoriesMobile() {
   el.innerHTML = sorted.map(([name, data]) => {
     const info = CATEGORIES[name] || CATEGORIES['אחר'];
     const pct = (data.total / maxAmt * 100).toFixed(0);
-    const items = [...data.items].sort((a,b) => new Date(b.date) - new Date(a.date));
+    const items = [...data.items].sort((a,b) => new Date(b.date + 'T12:00:00') - new Date(a.date + 'T12:00:00'));
     const rows = items.map(t => {
-      const d = new Date(t.date);
+      const d = new Date(t.date + 'T12:00:00');
       const ds = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
       return `<div class="cat-tx-item">
         <span class="rec-btn ${t.recurring?'on':''}" onclick="event.stopPropagation();toggleRec('${t.id}')">${t.recurring?'⭐':'☆'}</span>
@@ -1042,7 +1042,7 @@ function toggleYearView(btn) {
 
 function renderTransactions() {
   let txs = yearView
-    ? transactions.filter(t => new Date(t.date).getFullYear() === currentYear)
+    ? transactions.filter(t => new Date(t.date + 'T12:00:00').getFullYear() === currentYear)
     : getMonthTxs();
   const q=(document.getElementById('searchInput')?.value||'').toLowerCase();
   if(q) txs=txs.filter(t=>t.name.toLowerCase().includes(q));
@@ -1054,7 +1054,7 @@ function renderTransactions() {
   txs.sort((a,b) => {
     const aLater = isLaterInst(a), bLater = isLaterInst(b);
     if (aLater !== bLater) return aLater ? 1 : -1;
-    return new Date(b.date) - new Date(a.date);
+    return new Date(b.date + 'T12:00:00') - new Date(a.date + 'T12:00:00');
   });
 
   // Summary bar
@@ -1074,7 +1074,7 @@ function renderTransactions() {
   el.innerHTML=txs.map(t=>{
     const info=CATEGORIES[t.category||'אחר']||CATEGORIES['אחר'];
     const badge=t.card==='isracard'?'<span class="tx-card-badge badge-isracard">ישראכרט</span>':t.card==='diners'?'<span class="tx-card-badge badge-cal" style="background:rgba(255,101,132,0.15);color:#ff6584">דיינרס</span>':t.card==='card6244'?'<span class="tx-card-badge" style="background:rgba(0,200,150,0.15);color:#00c896">לייף סטייל</span>':t.card==='card8046'?'<span class="tx-card-badge" style="background:rgba(255,200,0,0.15);color:#ffc800">חבר</span>':'<span class="tx-card-badge badge-cal">כאל</span>';
-    const d=new Date(t.date);
+    const d=new Date(t.date + 'T12:00:00');
     const ds=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
     const cat = t.category || 'אחר';
     const catColor = cat === 'אחר' ? 'var(--accent2)' : 'var(--text-dim)';
@@ -1105,9 +1105,9 @@ function renderMerchants() {
   if(!sorted.length){el.innerHTML='<div class="empty-state"><div class="icon">🏪</div><p>אין נתונים</p></div>';return;}
   el.innerHTML=sorted.map(([name,data],i)=>{
     const mid='m'+i;
-    const items=[...data.items].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const items=[...data.items].sort((a,b)=>new Date(b.date + 'T12:00:00')-new Date(a.date + 'T12:00:00'));
     const rows=items.map(t=>{
-      const d=new Date(t.date);
+      const d=new Date(t.date + 'T12:00:00');
       const ds=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
       return `<div class="merchant-tx"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px">${ds}</span></div><div class="merchant-tx-amount">₪${fmt(t.amount)}</div></div>`;
     }).join('');
@@ -1245,8 +1245,8 @@ function updateInstPreview() {
   const el = document.getElementById('instPreview');
   if (amt && cnt >= 2 && date) {
     const per = Math.round((amt/cnt)*100)/100;
-    const d = new Date(date);
-    const endD = new Date(date);
+    const d = new Date(date + 'T12:00:00');
+    const endD = new Date(date + 'T12:00:00');
     endD.setMonth(endD.getMonth()+cnt-1);
     const startStr = String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
     const endStr = String(endD.getMonth()+1).padStart(2,'0')+'/'+endD.getFullYear();
@@ -1496,7 +1496,7 @@ function getCmpMonths() {
 
 function getTxsForMonth(m, y) {
   return transactions.filter(t => {
-    const d = new Date(t.date);
+    const d = new Date(t.date + 'T12:00:00');
     return d.getMonth() === m && d.getFullYear() === y;
   });
 }
