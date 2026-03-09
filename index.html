@@ -1480,7 +1480,10 @@ function removeDuplicates(){
   saveAll(); render(); renderCompare();
   showToast(removed > 0 ? `הוסרו ${removed} כפילויות ✓` : 'אין כפילויות');
 }
-function clearAll(){transactions=[];monthlyBudget=0;saveAll();render();showToast('הנתונים נמחקו');}
+function clearAll(){
+  if(!confirm('האם את בטוח שאתה רוצה למחוק את כל הנתונים?')) return;
+  transactions=[];monthlyBudget=0;saveAll();render();showToast('הנתונים נמחקו');
+}
 
 window.parseSMS=function(text){
   let tx={id:Date.now(),foreign:false,recurring:false};
