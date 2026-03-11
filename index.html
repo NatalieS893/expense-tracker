@@ -1069,7 +1069,7 @@ function renderTransactions() {
   else if(activeFilter==='cal') txs=txs.filter(t=>t.card==='cal');
   else if(activeFilter==='foreign') txs=txs.filter(t=>t.foreign);
   else if(activeFilter==='recurring') txs=txs.filter(t=>t.recurring);
-  const isLaterInst = t => { const m = t.name.match(/\((\d+)\/\d+\)$/); return m && parseInt(m[1]) > 1; };
+  const isLaterInst = t => { const m = t.name && t.name.match(/\((\d+)\/\d+\)$/); return m && parseInt(m[1]) > 1; };
   txs.sort((a,b) => {
     const aLater = isLaterInst(a), bLater = isLaterInst(b);
     if (aLater !== bLater) return aLater ? 1 : -1;
@@ -1096,10 +1096,9 @@ function renderTransactions() {
     const badge=t.card==='isracard'?'<span class="tx-card-badge badge-isracard">ישראכרט 7787</span>':t.card==='diners'?'<span class="tx-card-badge badge-cal" style="background:rgba(255,101,132,0.15);color:#ff6584">דיינרס</span>':t.card==='card6244'?'<span class="tx-card-badge" style="background:rgba(0,200,150,0.15);color:#00c896">לייף סטייל</span>':t.card==='card8046'?'<span class="tx-card-badge" style="background:rgba(255,200,0,0.15);color:#ffc800">חבר</span>':t.card==='isracard0470'?'<span class="tx-card-badge badge-isracard">ישראכרט 0470</span>':t.card==='max7125'?'<span class="tx-card-badge" style="background:rgba(0,180,255,0.15);color:#00b4ff">מקס 7125</span>':'<span class="tx-card-badge badge-cal">כאל</span>';
     const d=parseDate(t.date);
     const ds=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
-    const isPrevMonth = d.getMonth() !== currentMonth || d.getFullYear() !== currentYear;
     const isInstallment = t.name && /\(\d+\/\d+\)/.test(t.name);
     let sep = '';
-    if ((isPrevMonth || isInstallment) && !separatorAdded) {
+    if (isLaterInst(t) && !separatorAdded) {
       separatorAdded = true;
       sep = `<div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px;padding:0 4px"><div style="flex:1;border-top:2px dashed #ffc800"></div><span style="font-size:11px;color:#ffc800;white-space:nowrap;font-weight:600">חיובים מחודשים קודמים</span><div style="flex:1;border-top:2px dashed #ffc800"></div></div>`;
     }
