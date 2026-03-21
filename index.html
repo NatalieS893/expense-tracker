@@ -569,7 +569,7 @@ function renderExpenseBars() {
 
   // קבועות
   const fPct = fixedBudget > 0 ? Math.min((fixedSpent/fixedBudget)*100, 100) : 0;
-  const fColor = fPct > 100 ? 'var(--accent2)' : fPct > 85 ? 'var(--warn)' : '#ffa94d';
+  const fColor = fixedSpent > fixedBudget ? '#e03131' : '#4da6ff';
   document.getElementById('fixedSpentLabel').textContent = '₪'+fmt(fixedSpent);
   document.getElementById('fixedBudgetLabel').textContent = ' / ₪'+fmt(fixedBudget);
   document.getElementById('fixedBar').style.width = fPct+'%';
@@ -581,7 +581,7 @@ function renderExpenseBars() {
 
   // משתנות
   const vPct = varBudget > 0 ? Math.min((varSpent/varBudget)*100, 100) : 0;
-  const vColor = vPct > 100 ? 'var(--accent2)' : vPct > 85 ? 'var(--warn)' : '#6c63ff';
+  const vColor = varSpent > varBudget ? '#e03131' : '#4da6ff';
   document.getElementById('varSpentLabel').textContent = '₪'+fmt(varSpent);
   document.getElementById('varBudgetLabel').textContent = ' / ₪'+fmt(varBudget);
   document.getElementById('varBar').style.width = vPct+'%';
@@ -1085,6 +1085,7 @@ function renderChart() {
 
 function renderCategories() {
   const txs=getMonthTxs();
+  const totalBudget = getMonthBudget();
   const cats={};
   txs.forEach(t=>{ const c=t.category||'אחר'; if(!cats[c]) cats[c]={total:0,items:[]}; cats[c].total+=t.amount; cats[c].items.push(t); });
   const sorted=Object.entries(cats).sort((a,b)=>b[1].total-a[1].total);
@@ -1094,6 +1095,7 @@ function renderCategories() {
   el.innerHTML=sorted.map(([name,data])=>{
     const info=CATEGORIES[name]||CATEGORIES['אחר'];
     const pct=(data.total/maxAmt*100).toFixed(0);
+    // חריגה: קטגוריה עולה על 20% מהתקציב הכולל
     const items=[...data.items].sort((a,b)=>parseDate(b.date)-parseDate(a.date));
     const rows=items.map(t=>{
       const d=parseDate(t.date);
@@ -1113,7 +1115,7 @@ function renderCategories() {
           <div class="cat-name"><span class="cat-emoji">${info.emoji}</span>${name}</div>
           <div class="cat-right"><div style="text-align:left"><div class="cat-amount">₪${fmt(data.total)}</div><div class="cat-count">${data.items.length} עסקאות</div></div><span class="cat-chevron">▼</span></div>
         </div>
-        <div class="cat-bar-bg"><div class="cat-bar" style="width:${pct}%;background:${info.color}"></div></div>
+        <div class="cat-bar-bg"><div class="cat-bar" style="width:${pct}%;background:#4da6ff"></div></div>
       </div>
       <div class="cat-detail">${rows}</div>
     </div>`;
@@ -1122,6 +1124,7 @@ function renderCategories() {
 
 function renderCategoriesMobile() {
   const txs = getMonthTxs();
+  const totalBudget = getMonthBudget();
   const cats = {};
   txs.forEach(t => {
     const cat = t.category || 'אחר';
@@ -1155,7 +1158,7 @@ function renderCategoriesMobile() {
           <div class="cat-name"><span class="cat-emoji">${info.emoji}</span>${name}</div>
           <div class="cat-right"><div style="text-align:left"><div class="cat-amount">₪${fmt(data.total)}</div><div class="cat-count">${data.items.length} עסקאות</div></div><span class="cat-chevron">▼</span></div>
         </div>
-        <div class="cat-bar-bg"><div class="cat-bar" style="width:${pct}%;background:${info.color}"></div></div>
+        <div class="cat-bar-bg"><div class="cat-bar" style="width:${pct}%;background:#4da6ff"></div></div>
       </div>
       <div class="cat-detail">${rows}</div>
     </div>`;
@@ -1222,6 +1225,7 @@ function renderTransactions() {
     const catColor = cat === 'אחר' ? 'var(--accent2)' : 'var(--text-dim)';
     const catLabel = cat === 'אחר' ? '⚠️ לא מקוטלג' : `${info.emoji} ${cat}`;
     return sep + `<div class="tx-item" onclick="openCatModal('${t.id}')" style="cursor:pointer">
+      <span class="tx-rec-btn ${t.recurring?'on':''}" onclick="event.stopPropagation();toggleRec('${t.id}')">${t.recurring?'⭐':'☆'}</span>
       <div class="tx-icon">${info.emoji}</div>
       <div class="tx-info">
         <div class="tx-name">${t.name}</div>
@@ -1233,7 +1237,6 @@ function renderTransactions() {
       <div class="tx-right"><div class="tx-amount${t.foreign?' foreign':''}">₪${t.amount.toFixed(2)}</div><div class="tx-date">${ds}</div></div>
       <button onclick="event.stopPropagation();editTx('${t.id}')" style="background:none;border:none;color:var(--text-dim);font-size:15px;cursor:pointer;padding:4px;" title="ערוך">✏️</button>
       <button onclick="event.stopPropagation();deleteTx('${t.id}')" style="background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;padding:4px;margin-right:4px;" title="מחק">🗑️</button>
-      <span class="tx-rec-btn ${t.recurring?'on':''}" onclick="event.stopPropagation();toggleRec('${t.id}')">${t.recurring?'⭐':'☆'}</span>
     </div>`;
   }).join('');
 }
