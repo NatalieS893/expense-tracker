@@ -1112,7 +1112,14 @@ function renderCategories() {
           <div class="cat-name"><span class="cat-emoji">${info.emoji}</span>${name}</div>
           <div class="cat-right"><div style="text-align:left"><div class="cat-amount">₪${fmt(data.total)}</div><div class="cat-count">${data.items.length} עסקאות</div></div><span class="cat-chevron">▼</span></div>
         </div>
-        <div class="cat-bar-bg"><div class="cat-bar" style="width:${pct}%;background:#4da6ff"></div></div> {
+        <div class="cat-bar-bg"><div class="cat-bar" style="width:${pct}%;background:#4da6ff"></div></div>
+      </div>
+      <div class="cat-detail">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCategoriesMobile() {
   const txs = getMonthTxs();
   const cats = {};
   txs.forEach(t => {
@@ -1148,6 +1155,13 @@ function renderCategories() {
           <div class="cat-right"><div style="text-align:left"><div class="cat-amount">₪${fmt(data.total)}</div><div class="cat-count">${data.items.length} עסקאות</div></div><span class="cat-chevron">▼</span></div>
         </div>
         <div class="cat-bar-bg"><div class="cat-bar" style="width:${pct}%;background:#4da6ff"></div></div>
+      </div>
+      <div class="cat-detail">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
+let yearView = false;
 
 function toggleYearView(btn) {
   yearView = !yearView;
