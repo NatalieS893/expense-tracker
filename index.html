@@ -305,14 +305,17 @@
 <!-- HOME -->
 <div id="page-home" class="page active">
   <div class="main">
-    <div class="budget-card">
-      <div class="budget-header">
+    <div class="budget-card" style="padding:12px 18px">
+      <div class="budget-header" style="margin-bottom:8px">
         <div class="budget-title">תקציב חודשי</div>
-        <button class="budget-edit-btn" onclick="openBudgetModal()">✏️ עריכה</button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--text-dim)">עסקאות: <span id="monthTxCount" style="color:var(--accent3);font-weight:700">0</span></span>
+          <button class="budget-edit-btn" onclick="openBudgetModal()">✏️ עריכה</button>
+        </div>
       </div>
-      <div class="budget-amounts">
+      <div class="budget-amounts" style="margin-bottom:7px">
         <div>
-          <div style="font-size:11px;color:var(--text-dim);margin-bottom:3px">הוצאתי</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:2px">הוצאתי</div>
           <div class="budget-spent"><span class="cur">₪</span><span id="budgetSpent">0</span></div>
         </div>
         <div class="budget-remaining">
@@ -321,18 +324,18 @@
         </div>
       </div>
       <div class="budget-bar-bg"><div class="budget-bar-fill" id="budgetBarFill" style="width:0%;background:var(--accent3)"></div></div>
-      <div class="budget-meta"><span id="budgetPct">לא הוגדר תקציב</span><span id="budgetTotal"></span></div>
+      <div class="budget-meta" style="margin-top:4px"><span id="budgetPct">לא הוגדר תקציב</span><span id="budgetTotal"></span></div>
     </div>
 
     <div class="summary-grid">
-      <div style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <div style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px">
         <div>
           <div class="card-label">תקציב חודשי</div>
-          <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px"><span style="font-size:13px;font-weight:400;color:var(--text-dim)">₪</span><span id="summBudgetSpent">0</span></div>
-          <div style="font-size:14px;font-weight:700;color:#4da6ff;margin-top:3px" id="summBudgetLabel">לא הוגדר תקציב</div>
+          <div style="font-size:20px;font-weight:900;letter-spacing:-0.5px"><span style="font-size:12px;font-weight:400;color:var(--text-dim)">₪</span><span id="summBudgetSpent">0</span></div>
+          <div style="font-size:12px;font-weight:700;color:#4da6ff;margin-top:1px" id="summBudgetLabel">לא הוגדר תקציב</div>
         </div>
         <div style="flex:1;max-width:160px">
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:5px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:4px">
             <span id="summBudgetPct">0%</span>
             <span id="summBudgetRemaining"></span>
           </div>
@@ -341,13 +344,8 @@
           </div>
         </div>
       </div>
-      <div class="summary-card" style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:space-between">
-        <div class="card-label" style="font-size:13px">עסקאות החודש</div>
-        <div style="font-size:28px;font-weight:900;color:var(--accent3)" id="monthTxCount">0</div>
-      </div>
-
       <!-- פסי התקדמות קבועות/משתנות -->
-      <div style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px">
+      <div style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">התקדמות הוצאות</div>
           <button onclick="openExpenseSettingsModal()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:10px;padding:2px 7px;cursor:pointer;font-family:Heebo,sans-serif">⚙️ הגדרות</button>
