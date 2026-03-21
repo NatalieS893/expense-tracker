@@ -99,8 +99,9 @@
   .search-box { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; align-items:center; gap:8px; margin-bottom:12px; }
   .search-box input { flex:1; background:none; border:none; outline:none; color:var(--text); font-family:'Heebo',sans-serif; font-size:14px; }
   .search-box input::placeholder { color:var(--text-dim); }
-  .filters { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:14px; padding-bottom:2px; }
-  .filter-chip { padding:4px 10px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); font-size:11px; cursor:pointer; white-space:nowrap; font-family:'Heebo',sans-serif; transition:all 0.15s; }
+  .filters { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin-bottom:14px; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
+  .filters::-webkit-scrollbar { display:none; }
+  .filter-chip { padding:6px 13px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); font-size:12px; cursor:pointer; white-space:nowrap; font-family:'Heebo',sans-serif; transition:all 0.15s; }
   .filter-chip.active { background:var(--accent); border-color:var(--accent); color:white; }
 
   .tx-list { display:flex; flex-direction:column; gap:7px; }
@@ -1221,7 +1222,6 @@ function renderTransactions() {
     const catColor = cat === 'אחר' ? 'var(--accent2)' : 'var(--text-dim)';
     const catLabel = cat === 'אחר' ? '⚠️ לא מקוטלג' : `${info.emoji} ${cat}`;
     return sep + `<div class="tx-item" onclick="openCatModal('${t.id}')" style="cursor:pointer">
-      <span class="tx-rec-btn ${t.recurring?'on':''}" onclick="event.stopPropagation();toggleRec('${t.id}')">${t.recurring?'⭐':'☆'}</span>
       <div class="tx-icon">${info.emoji}</div>
       <div class="tx-info">
         <div class="tx-name">${t.name}</div>
@@ -1233,6 +1233,7 @@ function renderTransactions() {
       <div class="tx-right"><div class="tx-amount${t.foreign?' foreign':''}">₪${t.amount.toFixed(2)}</div><div class="tx-date">${ds}</div></div>
       <button onclick="event.stopPropagation();editTx('${t.id}')" style="background:none;border:none;color:var(--text-dim);font-size:15px;cursor:pointer;padding:4px;" title="ערוך">✏️</button>
       <button onclick="event.stopPropagation();deleteTx('${t.id}')" style="background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;padding:4px;margin-right:4px;" title="מחק">🗑️</button>
+      <span class="tx-rec-btn ${t.recurring?'on':''}" onclick="event.stopPropagation();toggleRec('${t.id}')">${t.recurring?'⭐':'☆'}</span>
     </div>`;
   }).join('');
 }
