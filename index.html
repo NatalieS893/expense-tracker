@@ -99,9 +99,8 @@
   .search-box { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; align-items:center; gap:8px; margin-bottom:12px; }
   .search-box input { flex:1; background:none; border:none; outline:none; color:var(--text); font-family:'Heebo',sans-serif; font-size:14px; }
   .search-box input::placeholder { color:var(--text-dim); }
-  .filters { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin-bottom:14px; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
-  .filters::-webkit-scrollbar { display:none; }
-  .filter-chip { padding:6px 13px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); font-size:12px; cursor:pointer; white-space:nowrap; font-family:'Heebo',sans-serif; transition:all 0.15s; }
+  .filters { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:14px; padding-bottom:2px; }
+  .filter-chip { padding:4px 10px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); font-size:11px; cursor:pointer; white-space:nowrap; font-family:'Heebo',sans-serif; transition:all 0.15s; }
   .filter-chip.active { background:var(--accent); border-color:var(--accent); color:white; }
 
   .tx-list { display:flex; flex-direction:column; gap:7px; }
