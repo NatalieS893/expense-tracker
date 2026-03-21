@@ -99,7 +99,7 @@
   .search-box { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; align-items:center; gap:8px; margin-bottom:12px; }
   .search-box input { flex:1; background:none; border:none; outline:none; color:var(--text); font-family:'Heebo',sans-serif; font-size:14px; }
   .search-box input::placeholder { color:var(--text-dim); }
-  .filters { display:flex; gap:7px; overflow-x:auto; scrollbar-width:none; margin-bottom:14px; }
+  .filters { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin-bottom:14px; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
   .filters::-webkit-scrollbar { display:none; }
   .filter-chip { padding:6px 13px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); font-size:12px; cursor:pointer; white-space:nowrap; font-family:'Heebo',sans-serif; transition:all 0.15s; }
   .filter-chip.active { background:var(--accent); border-color:var(--accent); color:white; }
@@ -345,6 +345,54 @@
         <div class="card-label" style="font-size:13px">עסקאות החודש</div>
         <div style="font-size:28px;font-weight:900;color:var(--accent3)" id="monthTxCount">0</div>
       </div>
+
+      <!-- פסי התקדמות קבועות/משתנות -->
+      <div style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">התקדמות הוצאות</div>
+          <button onclick="openExpenseSettingsModal()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:10px;padding:2px 7px;cursor:pointer;font-family:Heebo,sans-serif">⚙️ הגדרות</button>
+        </div>
+        <!-- קבועות -->
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:13px">⭐</span>
+              <span style="font-size:12px;font-weight:600">הוצאות קבועות</span>
+            </div>
+            <div style="text-align:left">
+              <span style="font-size:12px;font-weight:700" id="fixedSpentLabel">₪0</span>
+              <span style="font-size:10px;color:var(--text-dim)" id="fixedBudgetLabel"> / ₪10,000</span>
+            </div>
+          </div>
+          <div style="height:10px;background:var(--surface2);border-radius:5px;overflow:hidden">
+            <div id="fixedBar" style="height:100%;width:0%;border-radius:5px;background:#ffa94d;transition:width 0.6s ease"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-top:3px">
+            <span id="fixedPct">0%</span>
+            <span id="fixedRemaining"></span>
+          </div>
+        </div>
+        <!-- משתנות -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:13px">📊</span>
+              <span style="font-size:12px;font-weight:600">הוצאות משתנות</span>
+            </div>
+            <div style="text-align:left">
+              <span style="font-size:12px;font-weight:700" id="varSpentLabel">₪0</span>
+              <span style="font-size:10px;color:var(--text-dim)" id="varBudgetLabel"> / ₪8,000</span>
+            </div>
+          </div>
+          <div style="height:10px;background:var(--surface2);border-radius:5px;overflow:hidden">
+            <div id="varBar" style="height:100%;width:0%;border-radius:5px;background:#6c63ff;transition:width 0.6s ease"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-top:3px">
+            <span id="varPct">0%</span>
+            <span id="varRemaining"></span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="chart-card">
@@ -512,7 +560,62 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let transactions = [];
+let fixedBudget = 10000; // תקציב הוצאות קבועות
+
+function renderExpenseBars() {
+  const txs = getMonthTxs();
+  const fixedSpent = txs.filter(t => t.recurring).reduce((s,t) => s+t.amount, 0);
+  const totalBudget = getMonthBudget();
+  const varBudget = Math.max(0, totalBudget - fixedBudget);
+  const varSpent = txs.filter(t => !t.recurring).reduce((s,t) => s+t.amount, 0);
+
+  // קבועות
+  const fPct = fixedBudget > 0 ? Math.min((fixedSpent/fixedBudget)*100, 100) : 0;
+  const fColor = fPct > 100 ? 'var(--accent2)' : fPct > 85 ? 'var(--warn)' : '#ffa94d';
+  document.getElementById('fixedSpentLabel').textContent = '₪'+fmt(fixedSpent);
+  document.getElementById('fixedBudgetLabel').textContent = ' / ₪'+fmt(fixedBudget);
+  document.getElementById('fixedBar').style.width = fPct+'%';
+  document.getElementById('fixedBar').style.background = fColor;
+  document.getElementById('fixedPct').textContent = fPct.toFixed(0)+'%';
+  const fRem = fixedBudget - fixedSpent;
+  document.getElementById('fixedRemaining').textContent = fRem >= 0 ? 'נותר ₪'+fmt(fRem) : 'חריגה ₪'+fmt(Math.abs(fRem));
+  document.getElementById('fixedRemaining').style.color = fRem >= 0 ? 'var(--accent3)' : 'var(--accent2)';
+
+  // משתנות
+  const vPct = varBudget > 0 ? Math.min((varSpent/varBudget)*100, 100) : 0;
+  const vColor = vPct > 100 ? 'var(--accent2)' : vPct > 85 ? 'var(--warn)' : '#6c63ff';
+  document.getElementById('varSpentLabel').textContent = '₪'+fmt(varSpent);
+  document.getElementById('varBudgetLabel').textContent = ' / ₪'+fmt(varBudget);
+  document.getElementById('varBar').style.width = vPct+'%';
+  document.getElementById('varBar').style.background = vColor;
+  document.getElementById('varPct').textContent = vPct.toFixed(0)+'%';
+  const vRem = varBudget - varSpent;
+  document.getElementById('varRemaining').textContent = vRem >= 0 ? 'נותר ₪'+fmt(vRem) : 'חריגה ₪'+fmt(Math.abs(vRem));
+  document.getElementById('varRemaining').style.color = vRem >= 0 ? 'var(--accent3)' : 'var(--accent2)';
+}
+
+function openExpenseSettingsModal() {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
+  modal.innerHTML = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;width:100%;max-width:360px;direction:rtl">
+    <div style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--accent)">⚙️ הגדרות תקציב</div>
+    <div class="field" style="margin-bottom:10px"><label class="lbl">תקציב הוצאות קבועות (₪)</label><input id="fixedBudgetInput" type="number" class="inp" value="${fixedBudget}"></div>
+    <div style="font-size:11px;color:var(--text-dim);margin-bottom:16px">תקציב משתנות = תקציב חודשי כולל − קבועות</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-primary" style="flex:1" onclick="saveExpenseSettings(this.closest('div[style*=fixed]'))">שמור</button>
+      <button class="btn-secondary" style="flex:1" onclick="this.closest('div[style*=fixed]').remove()">ביטול</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function saveExpenseSettings(modal) {
+  const v = parseFloat(document.getElementById('fixedBudgetInput').value);
+  if (v >= 0) { fixedBudget = v; localStorage.setItem('fixedBudget', v); }
+  modal.remove();
+  renderExpenseBars();
+  showToast('הגדרות עודכנו ✓');
+}
 let monthlyBudget = 18000;
 let budgetsByMonth = {}; // תקציב לפי חודש: '2026-03' -> 18000
 let currentMonth = new Date().getMonth();
@@ -760,6 +863,7 @@ async function loadAll() {
     try { const r = await window.storage.get('ksf-data'); raw = r?.value; } catch(e) { raw = localStorage.getItem('ksf-data'); }
     if (raw) { const d = JSON.parse(raw); transactions=d.transactions||[]; monthlyBudget=d.budget||18000; merchantCategories=d.merchantCategories||{}; budgetsByMonth=d.budgetsByMonth||{}; }
   } catch(e) {}
+  fixedBudget = parseFloat(localStorage.getItem('fixedBudget')) || 10000;
   // נקה כפולות
   const seen = new Set();
   transactions = transactions.filter(t => {
@@ -781,7 +885,7 @@ function showToast(msg) {
 
 function render() {
   document.getElementById('monthLabel').textContent = `${MONTHS_HE[currentMonth]} ${currentYear}`;
-  renderBudget(); renderSummary(); renderChart(); renderCategories(); renderTransactions(); renderMerchants();
+  renderBudget(); renderSummary(); renderExpenseBars(); renderChart(); renderCategories(); renderTransactions(); renderMerchants();
 }
 
 function renderBudget() {
