@@ -656,7 +656,7 @@ function getCategory(name) {
   return 'אחר';
 }
 
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzHzWpgU-4VzQQcLwhSuUxRdGpxa4Z2G0CVEP0Y4Oq0AJM4d3t61Y6sRSMJ6DzbMGnN/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzSaj8msIHLqud5eBnU3Jj5ONvDK9NxyEamNHIEspBiffVLxrxH47OH8cIEUDY1gfr6/exec';
 
 function exportCSV() {
   if (!transactions.length) { showToast('אין עסקאות לייצוא'); return; }
@@ -773,10 +773,16 @@ async function syncFromSheets(silent) {
   try {
     const rows = await syncFromSheetsJSONP();
     if (!Array.isArray(rows) || rows.length === 0) { if(!silent) showToast('הכל מעודכן ✓'); _syncing=false; return; }
-    const existing = new Set(transactions.map(t => makeKey(t.date, t.name, t.amount)));
-    // סט נוסף לבדיקת תאריך+סכום בלבד (ללא שם) — מונע כפילויות מ-SMS+push
-    const existingDateAmt = new Set(transactions.map(t => t.date.substring(0,10) + '|' + parseFloat(t.amount).toFixed(2)));
-    let added = 0;
+
+    // בנה מפה של עסקאות קיימות לפי id ולפי key
+    const existingById = {};
+    const existingByKey = new Set();
+    transactions.forEach(t => {
+      if (t.id) existingById[String(t.id)] = t;
+      existingByKey.add(makeKey(t.date, t.name, t.amount));
+    });
+
+    let added = 0, updated = 0;
     rows.forEach(r => {
       let date = '';
       if (r['תאריך']) {
@@ -784,68 +790,120 @@ async function syncFromSheets(silent) {
         if (typeof raw === 'string' && raw.match(/^\d{4}-\d{2}-\d{2}/)) {
           date = raw.trim().substring(0,10);
         } else {
-          // Date object מ-Sheets — פרסר ישירות
           const d = new Date(raw);
           date = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         }
       }
       const name = r['שם בית עסק'] ? String(r['שם בית עסק']).trim().replace(/\s+/g,' ') : '';
       const amount = parseFloat(r['סכום']) || 0;
+      const sheetId = r['id'] ? String(r['id']) : null;
+      const recurring = r['recurring'] === 'כן' || r['recurring'] === true;
+      const note = r['note'] ? String(r['note']) : '';
+      const card = (r['כרטיס'] || 'isracard').toLowerCase();
+      const foreign = r['חול'] === 'כן';
+      const category = r['קטגוריה'] || getCategory(name);
+
+      if (!date || !name) return;
+
+      // אם יש id — עדכן עסקה קיימת
+      if (sheetId && existingById[sheetId]) {
+        const t = existingById[sheetId];
+        t.recurring = recurring;
+        t.note = note;
+        t.name = name;
+        t.amount = amount;
+        t.date = date;
+        t.card = card;
+        t.foreign = foreign;
+        t.category = category;
+        updated++;
+        return;
+      }
+
       // סנכרן רק עסקאות מ-08/03/2026 קדימה
       if (date < '2026-03-07') return;
+
+      // בדוק כפילות לפי key
       const key = makeKey(date, name, amount);
-      const dateAmtKey = date + '|' + amount.toFixed(2);
-      // בדוק גם עם הפרש של יום אחד (הפרש UTC/ישראל)
       const dateObj = parseDate(date);
-      const datePlus1 = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()+1);
-      const dateMinus1 = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()-1);
-      const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-      const keyPlus1 = makeKey(fmt(datePlus1), name, amount);
-      const keyMinus1 = makeKey(fmt(dateMinus1), name, amount);
-      const dateAmtPlus1 = fmt(datePlus1) + '|' + amount.toFixed(2);
-      const dateAmtMinus1 = fmt(dateMinus1) + '|' + amount.toFixed(2);
-      const alreadyExists = existing.has(key) || existing.has(keyPlus1) || existing.has(keyMinus1)
-        || existingDateAmt.has(dateAmtKey) || existingDateAmt.has(dateAmtPlus1) || existingDateAmt.has(dateAmtMinus1);
-      if (!alreadyExists && date && name) {
-        transactions.push({
-          id: Date.now() + Math.random(),
-          date, name, amount,
-          card: (r['כרטיס'] || 'isracard').toLowerCase(),
-          foreign: r['חול'] === 'כן',
-          recurring: false,
-          category: r['קטגוריה'] || getCategory(name)
-        });
-        existing.add(key);
-        added++;
-      }
+      const fmt2 = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      const keyPlus1 = makeKey(fmt2(new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()+1)), name, amount);
+      const keyMinus1 = makeKey(fmt2(new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()-1)), name, amount);
+
+      if (existingByKey.has(key) || existingByKey.has(keyPlus1) || existingByKey.has(keyMinus1)) return;
+
+      transactions.push({
+        id: sheetId || (Date.now() + Math.random()),
+        date, name, amount, card, foreign, recurring, note,
+        category
+      });
+      existingByKey.add(key);
+      added++;
     });
-    if (added > 0) {
-      // נקה כפילויות אוטומטית אחרי סנכרון
+
+    if (added > 0 || updated > 0) {
+      // נקה כפילויות
       const seenKeys = new Set();
       transactions = transactions.filter(t => {
         const k = makeKey(t.date, t.name, t.amount);
         if (seenKeys.has(k)) return false;
         seenKeys.add(k); return true;
       });
-      saveAll(); render(); renderCompare(); showToast(`סונכרנו ${added} עסקאות חדשות ✓`);
-    }
-    else if (!silent) showToast('הכל מעודכן ✓');
+      saveAll(); render(); renderCompare();
+      const msg = [added > 0 ? `${added} חדשות` : '', updated > 0 ? `${updated} עודכנו` : ''].filter(Boolean).join(', ');
+      showToast(`סונכרן: ${msg} ✓`);
+    } else if (!silent) showToast('הכל מעודכן ✓');
   } catch(e) { if(!silent) showToast('שגיאת סנכרון — נסי שוב'); }
   _syncing = false;
 }
 
-async function pushToSheets(tx) {
+// ═══════════════════════════════════════════
+// כתיבה ל-Sheets — פעולות CRUD
+// ═══════════════════════════════════════════
+async function sheetsRequest(payload) {
   try {
     await fetch(SHEETS_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: {'Content-Type': 'text/plain'},
-      body: JSON.stringify({
-        date: tx.date, name: tx.name, amount: tx.amount,
-        card: tx.card, foreign: tx.foreign, category: tx.category, source: 'app'
-      })
+      body: JSON.stringify(payload)
     });
   } catch(e) {}
+}
+
+async function pushToSheets(tx) {
+  await sheetsRequest({
+    action: 'add',
+    id: String(tx.id),
+    date: tx.date,
+    name: tx.name,
+    amount: tx.amount,
+    card: tx.card,
+    foreign: tx.foreign,
+    category: tx.category,
+    recurring: tx.recurring || false,
+    note: tx.note || '',
+    source: 'app'
+  });
+}
+
+async function updateInSheets(tx) {
+  await sheetsRequest({
+    action: 'update',
+    id: String(tx.id),
+    name: tx.name,
+    amount: tx.amount,
+    date: tx.date,
+    card: tx.card,
+    foreign: tx.foreign,
+    category: tx.category,
+    recurring: tx.recurring || false,
+    note: tx.note || ''
+  });
+}
+
+async function deleteFromSheets(id) {
+  await sheetsRequest({ action: 'delete', id: String(id) });
 }
 
 let merchantCategories = {}; // זיכרון קטגוריות לפי שם עסק
@@ -1317,6 +1375,7 @@ function toggleRec(id) {
   if(!t) return;
   t.recurring=!t.recurring;
   saveAll(); render();
+  updateInSheets(t);
   showToast(t.recurring?'⭐ סומנה כהוצאה קבועה':'הוצאה הוסרה מהקבועות');
 }
 
@@ -1579,6 +1638,7 @@ function applyCat(applyAll) {
 
 function deleteTx(id) {
   if (!confirm('למחוק עסקה זו?')) return;
+  deleteFromSheets(id);
   transactions = transactions.filter(t => String(t.id) !== String(id));
   saveAll(); render(); renderCompare(); showToast('העסקה נמחקה ✓');
 }
@@ -1621,6 +1681,7 @@ function saveEditTx(id, modal) {
   tx.card = card;
   modal.remove();
   saveAll(); render(); renderCompare(); renderTransactions();
+  updateInSheets(tx);
   showToast('העסקה עודכנה ✓');
 }
 
