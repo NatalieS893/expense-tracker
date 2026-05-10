@@ -791,7 +791,7 @@ async function syncFromSheets(silent) {
           date = raw.trim().substring(0,10);
         } else {
           const d = new Date(raw);
-          date = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+          date = d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
         }
       }
       const name = r['שם בית עסק'] ? String(r['שם בית עסק']).trim().replace(/\s+/g,' ') : '';
@@ -815,11 +815,7 @@ async function syncFromSheets(silent) {
         t.date = date;
         t.card = card;
         t.foreign = foreign;
-        // שמור קטגוריה שהמשתמש הגדיר — עדכן רק אם Sheets יש קטגוריה ספציפית
-        // ואם המשתמש לא עקף אותה ב-merchantCategories
-        if (!merchantCategories[name]) {
-          if (category && category !== 'אחר') t.category = category;
-        }
+        t.category = category;
         updated++;
         return;
       }
@@ -1631,14 +1627,10 @@ function applyCat(applyAll) {
   if (applyAll) {
     // שמור בזיכרון לעסקאות עתידיות
     merchantCategories[tx.name] = _catModalSelected;
-    transactions.filter(t => t.name === tx.name).forEach(t => {
-      t.category = _catModalSelected;
-      updateInSheets(t);
-    });
+    transactions.filter(t => t.name === tx.name).forEach(t => t.category = _catModalSelected);
     showToast(`עודכנו כל עסקאות "${tx.name}" ✓`);
   } else {
     tx.category = _catModalSelected;
-    updateInSheets(tx);
     showToast('קטגוריה עודכנה לעסקה זו בלבד ✓');
   }
   saveAll(); render(); renderCompare(); closeCatModal();
