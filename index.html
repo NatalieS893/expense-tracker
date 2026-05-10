@@ -815,7 +815,10 @@ async function syncFromSheets(silent) {
         t.date = date;
         t.card = card;
         t.foreign = foreign;
-        t.category = category;
+        // שמור קטגוריה שהמשתמש הגדיר — עדכן רק אם Sheets יש קטגוריה ספציפית
+        if (!merchantCategories[name] && category && category !== 'אחר') {
+          t.category = category;
+        }
         updated++;
         return;
       }
@@ -1627,10 +1630,14 @@ function applyCat(applyAll) {
   if (applyAll) {
     // שמור בזיכרון לעסקאות עתידיות
     merchantCategories[tx.name] = _catModalSelected;
-    transactions.filter(t => t.name === tx.name).forEach(t => t.category = _catModalSelected);
+    transactions.filter(t => t.name === tx.name).forEach(t => {
+      t.category = _catModalSelected;
+      updateInSheets(t);
+    });
     showToast(`עודכנו כל עסקאות "${tx.name}" ✓`);
   } else {
     tx.category = _catModalSelected;
+    updateInSheets(tx);
     showToast('קטגוריה עודכנה לעסקה זו בלבד ✓');
   }
   saveAll(); render(); renderCompare(); closeCatModal();
