@@ -815,10 +815,7 @@ async function syncFromSheets(silent) {
         t.date = date;
         t.card = card;
         t.foreign = foreign;
-        // שמור קטגוריה שהמשתמש הגדיר — עדכן רק אם Sheets יש קטגוריה ספציפית
-        if (!merchantCategories[name] && category && category !== 'אחר') {
-          t.category = category;
-        }
+        // לא נוגעים בקטגוריה בכלל — נשמרת כפי שהמשתמש הגדיר
         updated++;
         return;
       }
@@ -835,10 +832,13 @@ async function syncFromSheets(silent) {
 
       if (existingByKey.has(key) || existingByKey.has(keyPlus1) || existingByKey.has(keyMinus1)) return;
 
+      // עסקה חדשה — השתמש ב-merchantCategories אם קיים, אחרת מה שב-Sheets
+      const resolvedCategory = merchantCategories[name] || category;
+
       transactions.push({
         id: sheetId || (Date.now() + Math.random()),
         date, name, amount, card, foreign, recurring, note,
-        category
+        category: resolvedCategory
       });
       existingByKey.add(key);
       added++;
